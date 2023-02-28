@@ -56,6 +56,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -88,16 +89,30 @@
   <ItemGroup>
     <CudaCompile Include="angio-lib\src\cuda_class_example.cu" />
     <CudaCompile Include="angio-lib\src\my_kernel.cu" />
-    <CudaCompile Include="angio-lib\src\SequenceComparator.cu" />
     <CudaCompile Include="apps\main.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="angio-lib\includes\Constants.h" />
     <ClInclude Include="angio-lib\includes\cuda_class_example.cuh" />
+    <ClInclude Include="angio-lib\includes\FileUtils.h" />
+    <ClInclude Include="angio-lib\includes\HighResolutionTimeManager.h" />
+    <ClInclude Include="angio-lib\includes\HighResolutionTimeManagerV2.h" />
+    <ClInclude Include="angio-lib\includes\JsonObject.h" />
+    <ClInclude Include="angio-lib\includes\Logger.h" />
     <ClInclude Include="angio-lib\includes\my_cuda_header.cuh" />
-    <ClInclude Include="angio-lib\includes\SequenceComparator.cuh" />
+    <ClInclude Include="angio-lib\includes\PermutationUtils.h" />
+    <ClInclude Include="angio-lib\includes\SequenceComparator.h" />
     <ClInclude Include="angio-lib\includes\StringUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="angio-lib\src\Constants.cpp" />
+    <ClCompile Include="angio-lib\src\FileUtils.cpp" />
+    <ClCompile Include="angio-lib\src\HighResolutionTimeManager.cpp" />
+    <ClCompile Include="angio-lib\src\HighResolutionTimeManagerV2.cpp" />
+    <ClCompile Include="angio-lib\src\JsonObject.cpp" />
+    <ClCompile Include="angio-lib\src\Logger.cpp" />
+    <ClCompile Include="angio-lib\src\PermutationUtils.cpp" />
+    <ClCompile Include="angio-lib\src\SequenceComparator.cpp" />
     <ClCompile Include="angio-lib\src\StringUtils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
