@@ -93,7 +93,7 @@ int main()
     cudaExampleClass.test_function();
 
     // char strings[][] array implementation
-    std::vector<std::string> strings1 = { "Hello\0", "World\0", "123\0" };
+    std::vector<std::string> strings1 = { "Hello_\0", "World\0", "123\0" };
     int strings2_arr_size = 3;
     char strings2[3][10] = { "Hello1", "World1", "1234" };
     char result_strings2[3][10] = {};
@@ -104,13 +104,54 @@ int main()
     const int char_element_size = 10;
     // char* strings3 = new char[char_array_size][char_element_size]; // this is not allowed
     // char strings3[char_array_size][char_element_size]; // this is allowed
-    char strings3[char_array_size][char_element_size] = { "Hey", "It's", "Me!" };
+    // strings3 = {...} // this is NOT allowed
+    char strings3[char_array_size][char_element_size] = { "Hey", "It's", "Me!" }; // this is allowed, since it is initalisation
+    
+    // custom population for std::vetor<std::string> test
+    char c_strings4[char_array_size][char_element_size];
+    // empty array init example
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 10; j++) {
+            c_strings4[i][j] = '\0'; // set each element to null character
+        }
+    }
+
+    // replace the respective indexes with correct chars, other indexes remain set to \0
+    for (int i = 0; i < char_array_size; i++) {
+        std::string current_string = strings1[i];
+        char string_as_char_array[char_element_size + 1];
+        strcpy(string_as_char_array, current_string.c_str());
+        
+        // c_strings4[i] = string_as_char_array; // error - cannot modify array; cČstrings4[i] returns the reference to the entire char array
+        
+        // assign the correct elements to chars
+        for (int j = 0; j < current_string.length(); j++) {
+            char c = current_string.at(j);
+            c_strings4[i][j] = c;
+        }
+    
+    }
+
+    // convert a char[][] back into std::strings - row by row
+    std::vector<std::string> result_strings4 = {};
+    for (int i = 0; i < 3; i++) {
+        std::string row_str(c_strings4[i], 10);
+        result_strings4.push_back(row_str);
+    }
+
+    // display strings
+    std::cout << "Displaying strings after char[][] testings:" << std::endl;
+    for (int i = 0; i < result_strings4.size(); i++) {
+        std::cout << "  - " << result_strings4[i] << std::endl;
+    }
+
 
     std::vector<char(*)[10]> vec; // char(*)[10] is a pointer to a character array !!!
     for (int i = 0; i < strings2_arr_size; i++) {
         vec.push_back(&strings2[i]);
     }
-
+    
+    // populate cstrings with c-style strings from strings1 (vector of std::string)
     const char** cstrings = new const char*[strings1.size()]; // each element is a pointer to a C-style string
     for (int i = 0; i < strings1.size(); i++) {
         cstrings[i] = strings1[i].c_str();
@@ -165,7 +206,7 @@ int main()
     return 0;
 }
 
-void convert_vec_to_cstrings(std::vector<char(*)[]> vec, ) {
+void convert_vec_to_cstrings(std::vector<char(*)[]> vec) {
 
 }
 
