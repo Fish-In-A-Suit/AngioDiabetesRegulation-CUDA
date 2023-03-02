@@ -75,10 +75,24 @@ bool StringUtils::contains(std::string& str, const char* substr) {
  * std::vector are only read.
  *
  * @param vecString: A vector of strings whose elements to print to std::cout
+ * @param firstMessage: A message that should be displayed before the loop prints out all of the contents
+ * @param shouldIndent: If the contents of the loop should be indented. Default is true.
+ * @param indentSeparator: Which indent separator to use (default is "\t")
  */
-void StringUtils::print_vector(std::vector<std::string>& vecString) {
-    for (std::string str : vecString) {
-        std::cout << str << std::endl;
+void StringUtils::print_vector(std::vector<std::string>& vecString, std::string firstMessage, bool shouldIndent, std::string indentSeparator) {
+    if (firstMessage != "") {
+        std::cout << firstMessage << std::endl;
+    }
+
+    if (shouldIndent) {
+        for (std::string str : vecString) {
+            std::cout << indentSeparator << str << std::endl;
+        }
+    }
+    else {
+        for (std::string str : vecString) {
+            std::cout << str << std::endl;
+        }
     }
 }
 

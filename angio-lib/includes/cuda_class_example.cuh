@@ -12,7 +12,7 @@ public:
 	void test_function();
 	void test_char_copy_function(const char**, const char**, int);
 	void test_char_copy_function_v2(char* result_char_array, char* input_char_array, int size);
-	void test_char_copy_function_v3(char(*)[10], char(*)[10], int);
+	void test_char_copy_function_v3(char(*)[20000], char(*)[20000], int);
 private:
 	int* d_num;
 };

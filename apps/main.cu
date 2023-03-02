@@ -97,134 +97,52 @@ __global__ void compareStringsv1(const char* str1, const char* str2, int len, fl
 
 int main()
 {
+    const int char_array_size = 3;
+    std::vector<std::string> strings1 = { "Hello_\0", "World\0", "123\0" };
+
+    // BEGINNER EXAMPLES
     const int arraySize = 5;
     const int a[arraySize] = { 1, 2, 3, 4, 5 };
     const int b[arraySize] = { 10, 20, 30, 40, 50 };
     int c[arraySize] = { 0 };
-
     CudaExampleClass cudaExampleClass(5);
     cudaExampleClass.test_function();
-
-    
-    std::vector<std::string> strings1 = { "Hello_\0", "World\0", "123\0" };
-
-    // CHAR[][] FIXED SIZE IMPLEMENTATION
-    int strings2_arr_size = 3;
-    char strings2[3][10] = { "Hello1", "World1", "1234" };
-    char result_strings2[3][10] = {};
-
-    // CHAR[][] WITH INITIALISATION AND INSTANTIATION SEPARATED
-    int strings3_arr_size = 3;
-    const int char_array_size = 3;
-    const int char_element_size = 10;
-    // char* strings3 = new char[char_array_size][char_element_size]; // this is not allowed
-    // char strings3[char_array_size][char_element_size]; // this is allowed
-    // strings3 = {...} // this is NOT allowed
-    char strings3[char_array_size][char_element_size] = { "Hey", "It's", "Me!" }; // this is allowed, since it is initalisation
-    
-    // FIXED SIZE CHAR[][] CHAR-BY-CHAR INITIALISATION AND INSTANTIATION
-    char c_strings4[char_array_size][char_element_size];
-    // empty array init example
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 10; j++) {
-            c_strings4[i][j] = '\0'; // set each element to null character
-        }
-    }
-
-    // replace the respective indexes with correct chars, other indexes remain set to \0
-    for (int i = 0; i < char_array_size; i++) {
-        std::string current_string = strings1[i]; // this copies strings from std::vector<std::string> strings1 into char[][]
-        
-        // this could also be implemented in the following way:
-        // char string_as_char_array[char_element_size + 1]; // +1 to account for '\0'
-        // strcpy(string_as_char_array, current_string.c_str()); // populate string_as_char array with chars from current_string
-        
-        // c_strings4[i] = string_as_char_array; // error - cannot modify array; cstrings4[i] returns the reference to the entire char array (entire row)
-        
-        // assign the correct elements to chars
-        for (int j = 0; j < current_string.length(); j++) {
-            char c = current_string.at(j);
-            c_strings4[i][j] = c;
-        }
-    
-    }
-
-    // convert a char[][] back into std::strings - row by row
-    std::vector<std::string> result_strings4 = {};
-    for (int i = 0; i < 3; i++) {
-        std::string row_str(c_strings4[i], 10);
-        result_strings4.push_back(row_str);
-    }
-
-    // display strings
-    std::cout << "Displaying strings after char[][] testings:" << std::endl;
-    for (int i = 0; i < result_strings4.size(); i++) {
-        std::cout << "  - " << result_strings4[i] << std::endl;
-    }
-
-    // IMPLEMENTATION OF A FUNCTION TO ACCEPT ANY SIZE OF A CHAR ARRAY (attempt 1)
-    // create the result char array
-    char c_strings5[char_array_size][char_element_size];
-    // empty array init example
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 10; j++) {
-            c_strings5[i][j] = 'n'; // set each element to null character
-        }
-    }
-    // call the function
-    // char** c_strings5_ptr = (char**) c_strings5; // this doesnt work
-    char(*c_strings5_ptr)[char_element_size] = c_strings5;
-    std::cout << *(*(c_strings5_ptr+1)+2) << std::endl; // access element at row 1, column 2
-
-    // convert_vec_to_cstrings((char**) c_strings5, strings1, char_array_size, char_element_size); // (char**) c_strings5 converts char[][] c_strings5 to a char** pointer of pointers
-    // convert the cstrings back into strings
-    // std::vector<std::string> result_strings5;
-    // convert_cstrings_to_strings(result_strings5, (char**)c_strings5, char_array_size, char_element_size);
+    // --- *** ---
+   
 
     // IMPLEMENTATION OF A FUNCTION TO ACCEPT ANY SIZE OF A CHAR ARRAY (attempt 2)
     char c_strings6[char_array_size][MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
     StringUtils::init_Cstrings_array(c_strings6, char_array_size);
-    convert_vec_to_cstrings(c_strings6, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-    // convert cstrings back into strings
-    std::vector<std::string> result_strings6;
-    convert_cstrings_to_strings(result_strings6, c_strings6, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-
-    // display strings
-    std::cout << "Displaying strings after char[][] function test for c_strings6:" << std::endl;
-    for (int i = 0; i < result_strings6.size(); i++) {
-        std::cout << "  - " << result_strings6[i] << std::endl;
-    }
-
-    // IMPLEMENTATION OF A FUNCTION TO ACCEPT ANY SIZE OF A CHAR ARRAY V2 (without using pointers)
-    char c_strings7[char_array_size][MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
-    StringUtils::init_Cstrings_array(c_strings7, char_array_size);
-    // empty array init example
-    // for (int i = 0; i < 3; i++) {
-    //    for (int j = 0; j < MAX_CHAR_ARRAY_SEQUENCE_LENGTH; j++) {
-    //        c_strings7[i][j] = '\0'; // set each element to null character
-    //    }
-    // }
+    StringUtils::convert_strings_to_Cstrings(c_strings6, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+    // StringUtils::convert_strings_to_Cstrings_ptr(c_strings6, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+    std::vector<std::string> result_strings6; // convert back into strings
+    StringUtils::convert_Cstrings_to_strings(result_strings6, c_strings6, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+    // StringUtils::convert_Cstrings_to_strings_ptr(result_strings6, c_strings6, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+    StringUtils::print_vector(result_strings6, "c_strings6 result:");
     
-    // convert to cstrings
-    // convert_vec_to_cstrings_v1(c_strings7, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-    StringUtils::convert_strings_to_Cstrings_ptr(c_strings7, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-    // convert cstrings back into strings
-    std::vector<std::string> result_strings7;
-    // convert_cstrings_to_strings_v1(result_strings7, c_strings7, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-    StringUtils::convert_Cstrings_to_strings_ptr(result_strings7, c_strings7, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-    // display strings
-    std::cout << "Displaying strings after char[][] POINTERLESS function test:" << std::endl;
-    for (int i = 0; i < result_strings7.size(); i++) {
-        std::cout << "  - " << result_strings7[i] << std::endl;
-    }
+    /*
+    char result_strings2[char_array_size][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+    cudaExampleClass.test_char_copy_function_v3(c_strings6, c_strings7, char_array_size);
+    std::cout << "Test_char_copy_function_v3 results:" << std::endl;
+    std::cout << "  - " << result_strings2[0] << std::endl;
+    std::cout << "  - " << result_strings2[1] << std::endl;
+    std::cout << "  - " << result_strings2[2] << std::endl;
+    */
+
+    // test my_strlen implementation
+    std::cout << "Strlen implentation my_strlen result for 'Hello' is: " << my_strlen("Hello") << std::endl;
+
+    // EXAMPLE: COPYING CHAR ARRAYS FROM CPU TO GPU AND BACK
+    // disadvantage of using double pointers: we cannot modify the values on the gpu, only read them
+    char strings2[3][10] = { "Hello1", "World1", "1234" };
+    char result_strings2[3][10] = {};
 
     std::vector<char(*)[10]> vec; // char(*)[10] is a pointer to a character array !!!
-    for (int i = 0; i < strings2_arr_size; i++) {
+    for (int i = 0; i < char_array_size; i++) {
         vec.push_back(&strings2[i]);
     }
-    
-    // populate cstrings with c-style strings from strings1 (vector of std::string)
-    const char** cstrings = new const char*[strings1.size()]; // each element is a pointer to a C-style string
+
+    const char** cstrings = new const char* [strings1.size()]; // each element is a pointer to a C-style string
     for (int i = 0; i < strings1.size(); i++) {
         cstrings[i] = strings1[i].c_str();
     }
@@ -233,157 +151,24 @@ int main()
         std::cout << cstrings[i] << std::endl;
     }
 
-    const char** result_cstrings = new const char*[strings1.size()];
+    const char** result_cstrings = new const char* [strings1.size()];
     cudaExampleClass.test_char_copy_function(result_cstrings, cstrings, strings1.size());
     cudaDeviceSynchronize();
     std::cout << "Printing c-style strings sent to and copied back from the gpu:" << std::endl;
     for (int i = 0; i < strings1.size(); i++) {
         std::cout << "  - " << result_cstrings[i] << std::endl;
     }
+    // --- *** ---
 
-    // TODO: WORK FROM HERE !!!!!
-    cudaExampleClass.test_char_copy_function_v3(result_strings2, strings2, strings2_arr_size);
-    std::cout << "Test_char_copy_function_v3 results:" << std::endl;
-    std::cout << "  - " << result_strings2[0] << std::endl;
-    std::cout << "  - " << result_strings2[1] << std::endl;
-    std::cout << "  - " << result_strings2[2] << std::endl;
-
-    // test my_strlen implementation
-    std::cout << "Strlen implentation my_strlen result for 'Hello' is: " << my_strlen("Hello") << std::endl;
-
-    // Add vectors in parallel.
-    /* cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addWithCuda failed!");
-        return 1;
-    }
-
-    printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
-        c[0], c[1], c[2], c[3], c[4]);
-
-    // cudaDeviceReset must be called before exiting in order for profiling and
-    // tracing tools such as Nsight and Visual Profiler to show complete traces.
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceReset failed!");
-        return 1;
-    }
-    */
-
+    // ANOTHER STARTER EXAMPLE
+    // warning: this must be at the end after all cuda calls, since it somehow messes up if it is called before other cuda calls.
     addWithCudaSimple(c, a, b, arraySize);
     // addWithCudaParallel(c, a, b, arraySize);
     printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
         c[0], c[1], c[2], c[3], c[4]);
+    // --- *** ---
 
     return 0;
-}
-
-/*
- * It's not possible to have an unspecified size for the second dimension of a multidimensional array when passing it as a function
- * parameter. When you declare a multidimensional array with an empty second dimension, such as char input_char_array[][ ], the compiler 
- * does not know how much memory to allocate for each row.
- * 
- * Example of an incorrect function: void convert_vec_to_cstrings(char input_char_array[][]) {...}
- * 
- * Instead, you can use a pointer to a dynamically allocated array and pass it as a function parameter.
- * 
- * TODO: This is not allowed with an error "Expression must a pointer to a complete object type".
- */
-void convert_vec_to_cstrings(char(*input_char_array)[], std::vector<std::string> strings) {
-    std::cout << "THIS FUNCTION HAS NO FUNCTIONALIY" << std::endl;
-    return; // todo: remove this if you resolve the error
-
-    int strings_size = strings.size();
-    // todo: check if size of input_char_array (the first dimensiuon) and strings_size match
-    for (int i = 0; i < strings_size; i++) {
-        std::string current_string = strings[i]; // this copies strings from std::vector<std::string> strings1 into char[][]
-
-        // assign the correct elements to chars
-        for (int j = 0; j < current_string.length(); j++) {
-            char c = current_string.at(j);
-            // input_char_array[i][j] = c; // error here
-        }
-
-    }
-}
-
-// THIS DOESNT WORK, memory access violation. You need to pass char(*input_char_array_ptr)[] and then access values by *(*input_char_array_ptr+i)+j);
-void convert_vec_to_cstrings(char** input_char_array, std::vector<std::string> strings, int row_count, int col_count) {
-    std::cout << "THIS FUNCTION HAS NO FUNCTIONALIY" << std::endl;
-    return; // todo: remove this if you resolve the error
-
-    int strings_size = strings.size();
-    // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
-    for (int i = 0; i < strings_size; i++) {
-        std::string current_string = strings[i];
-
-        int string_length = current_string.length();
-        // todo: check if the size of string_length is less than the second dimension of input_char_array (represented by col_count)
-        for (int j = 0; j < string_length; j++) {
-            char c = current_string.at(j);
-            input_char_array[i][j] = c;
-        }
-    }
-}
-
-// THIS DOESNT WORK, memory access violation. You need to pass char(*input_char_array_ptr)[] and then access values by *(*input_char_array_ptr+i)+j);
-void convert_cstrings_to_strings(std::vector<std::string> dst_strings, char** input_char_array, int row_count, int col_count) {
-    std::cout << "THIS FUNCTION HAS NO FUNCTIONALIY" << std::endl;
-    return; // todo: remove this if you resolve the error
-    // convert a char[][] back into std::strings - row by row
-    for (int i = 0; i < row_count; i++) {
-        std::string row_str(input_char_array[i], col_count);
-        dst_strings.push_back(row_str);
-    }
-}
-
-// THIS WORKS
-void convert_vec_to_cstrings(char(*input_char_array_ptr)[MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string> &strings, int row_count, int col_count) {
-    int strings_size = strings.size();
-    // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
-    for (int i = 0; i < strings_size; i++) {
-        std::string current_string = strings[i];
-        int string_length = current_string.length();
-        // todo: check if the size of string_length is less than the second dimension of input_char_array (represented by col_count)
-
-        for (int j = 0; j < string_length; j++) {
-            char c = current_string.at(j);
-            *(*(input_char_array_ptr + i) + j) = c;
-        }
-
-    }
-}
-
-// THIS WORKS
-// note: std::vector should be passed by reference (default it is passed by value)! 
-void convert_cstrings_to_strings(std::vector<std::string> &dst_strings, char(*input_char_array_ptr)[MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int row_count, int col_count) {
-    for (int i = 0; i < row_count; i++) {
-        std::string row_str(*(input_char_array_ptr + i), col_count);
-        dst_strings.push_back(row_str);
-    }
-}
-
-// note: std::vector should be passed by reference (default it is passed by value)! 
-void convert_vec_to_cstrings_v1(char input_char_array[][MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string> &strings, int row_count, int col_count) {
-    int strings_size = strings.size();
-    // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
-    for (int i = 0; i < strings_size; i++) {
-        std::string current_string = strings[i];
-        int string_length = current_string.length();
-        // todo: check if string_length < col_count
-        for (int j = 0; j < string_length; j++) {
-            char c = current_string.at(j);
-            input_char_array[i][j] = c;
-        }
-    }
-}
-
-// note: std::vector should be passed by reference (default it is passed by value)! 
-void convert_cstrings_to_strings_v1(std::vector<std::string> &dst_strings, char input_char_array[][MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int row_count, int col_count) {
-    for (int i = 0; i < row_count; i++) {
-        std::string row_str(input_char_array[i], col_count);
-        dst_strings.push_back(row_str);
-    }
 }
 
 /*

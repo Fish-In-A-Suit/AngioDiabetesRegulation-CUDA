@@ -135,6 +135,10 @@ void CudaExampleClass::test_char_copy_function(const char** result_char_array, c
     // copy data from host to device
     cudaMemcpy(device_char_array, input_char_array, size * sizeof(const char*), cudaMemcpyHostToDevice);
 
+    // ERROR: Expression must be a modifiable lvalue here
+    // device_char_array[1][2] = '4';
+    // *(*(device_char_array + 1) + 2) = '4';
+
     // run the GPU kernel
     // charCopyKernel<<<size, 1 >>>(device_result_array, device_char_array); // this works
     charCopyKernelv2<<<size, 1 >>>(device_result_array, device_char_array); // this also works
@@ -147,7 +151,7 @@ void CudaExampleClass::test_char_copy_function(const char** result_char_array, c
     cudaFree(device_result_array);
 }
 
-void CudaExampleClass::test_char_copy_function_v3(char(*result_char_array)[10] , char(*input_char_array)[10] , int size) {
+void CudaExampleClass::test_char_copy_function_v3(char(*result_char_array)[20000] , char(*input_char_array)[20000] , int size) {
     // TODO: PROCESS INPUT CHAR[][] FROM MAIN.CU
     char(*device_input_char_array)[10];
     char(*device_result_char_array)[10];
