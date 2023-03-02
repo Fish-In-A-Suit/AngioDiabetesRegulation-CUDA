@@ -24,7 +24,7 @@ public:
     static void convert_strings_to_Cstrings(char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>&, int, int);
     static void convert_Cstrings_to_strings(std::vector<std::string>&, char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int);
 
-    static void convert_strings_to_Cstrings_ptr(char(*)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>&, int, int);
+    static void convert_strings_to_Cstrings_ptr(char(*&)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>&, int, int);
     static void convert_Cstrings_to_strings_ptr(std::vector<std::string>&, char(*)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int);
 
     static void init_Cstrings_array(char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, char = '\0');

@@ -144,8 +144,11 @@ void StringUtils::print_vector(std::vector<std::string>& vecString, std::string 
  * @param col_count: corresponds to the maximum string length than can be stored (strings must not surpass the length set by Constants::MAX_CHAR_ARAY_SEQUENCE_LENGTH)
  * 
  * @return: none, but populates input_char_array_ptr (pointing to the 2d char array) with strings.
+ * 
+ * Note: the input char pointer is passed by reference! Normally, the pointers are passed by values, therefore local copies are made. If you want to modify the contents
+ * of the existing pointer, you have to pass it by reference using '&'.
  */
-void StringUtils::convert_strings_to_Cstrings_ptr(char(*input_char_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>& strings, int row_count, int col_count) {
+void StringUtils::convert_strings_to_Cstrings_ptr(char(*&input_char_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>& strings, int row_count, int col_count) {
     int strings_size = strings.size();
     // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
     for (int i = 0; i < strings_size; i++) {
@@ -225,6 +228,9 @@ void StringUtils::convert_Cstrings_to_strings_ptr(std::vector<std::string>& dst_
  * @param col_count: corresponds to the maximum string length than can be stored (strings must not surpass the length set by Constants::MAX_CHAR_ARAY_SEQUENCE_LENGTH)
  *
  * @return: none, but populates input_char_array_ptr (pointing to the 2d char array) with strings.
+ * 
+ * TODO: CHECK IF THIS WORKS NORMALLY USING PASS BY REFERENCE ???
+ * ADVICE: USE convert_strings_to_Cstrings_ptr, as they surely work.
  */
 void StringUtils::convert_strings_to_Cstrings(char input_char_array[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>& strings, int row_count, int col_count) {
     int strings_size = strings.size();

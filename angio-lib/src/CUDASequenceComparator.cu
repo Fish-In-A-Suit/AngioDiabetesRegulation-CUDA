@@ -30,14 +30,23 @@ CUDASequenceComparator::CUDASequenceComparator(std::string miRNAsequences_filepa
 	this->miRNA_names = miRNAfile_process_result[1];
 	this->miRNA_sequences = miRNAfile_process_result[2];
 	std::cout << "miRNA_miRDB_ids, miRNA_names, miRNA_sequences sizes:  " << miRNA_miRDB_ids.size() << ", " << miRNA_names.size() << ", " << miRNA_sequences.size() << std::endl;
-	//std::cout << "miRNA_miRDB_ids: " << std::endl;
-	//StringUtils::print_vector(miRNA_miRDB_ids);
 
 	this->mRNAs_filepath = mRNAsequences_filepath;
 	std::vector<std::vector<std::string>> mRNA_file_process_result = process_mRNAsequences_file(mRNAsequences_filepath);
 	this->mRNA_ids = mRNA_file_process_result[0];
 	this->mRNA_sequences = mRNA_file_process_result[1];
 	std::cout << "Processed counts for mRNA_ids, mRNA_sequences, mRNA_refseq_ids: " << mRNA_ids.size() << ", " << mRNA_sequences.size() << ", " << mRNA_refseq_ids.size() << std::endl;
+
+	// char miRNA_cstrings_array[miRNA_sequences.size()][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH]; // not allowed, as miRNA_sequences.size() is not const
+	char(*miRNA_cstrings_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH]  = new char[miRNA_sequences.size()][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+	char(*mRNA_cstrings_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH] = new char[mRNA_sequences.size()][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+
+	// populate this->miRNA_sequences_chars and this->mRNA_sequences_chars
+	StringUtils::convert_strings_to_Cstrings_ptr(miRNA_cstrings_array_ptr, this->miRNA_sequences, miRNA_sequences.size(), Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+	StringUtils::convert_strings_to_Cstrings_ptr(mRNA_cstrings_array_ptr, this->mRNA_sequences, mRNA_sequences.size(), Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+
+	this->miRNA_sequences_chars = miRNA_cstrings_array_ptr;
+	this->mRNA_sequences_chars = mRNA_cstrings_array_ptr;
 
 	std::cout << "Maximum miRNA and mRNA lengths (in nucleotides) are: " << max_miRNA_length << " and " << max_mRNA_length << std::endl;
 	printf("\x1B[31mTesting\033[0m\n");
