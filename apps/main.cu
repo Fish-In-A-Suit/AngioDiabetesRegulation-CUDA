@@ -5,12 +5,11 @@
 #include "StringUtils.h"
 #include "my_cuda_header.cuh"
 #include "cuda_class_example.cuh"
+#include "CUDASequenceComparator.cuh"
 
 #include <stdio.h>
 #include <iostream>
 #include <vector>
-
-const int MAX_CHAR_ARRAY_SEQUENCE_LENGTH = 20000;
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 void addWithCudaSimple(int* c, const int* a, const int* b, unsigned int size);
@@ -18,16 +17,6 @@ void addWithCudaParallel(int* c, const int* a, const int* b, unsigned int size);
 // void cudaCompareSequences(int* matchStrengths, std::vector<std::string>& mRNAs, std::vector<std::string>& miRNAs, unsigned int strArrSize);
 char** convertArray(std::vector<std::string>&, const int);
 int my_strlen(const char*); 
-
-void convert_vec_to_cstrings(char**, std::vector<std::string>, int, int);
-void convert_cstrings_to_strings(std::vector<std::string>, char**, int, int);
-
-void convert_vec_to_cstrings(char(*)[MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>&, int, int);
-void convert_cstrings_to_strings(std::vector<std::string>&, char(*)[MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int);
-
-void convert_vec_to_cstrings_v1(char[][MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>&, int, int);
-void convert_cstrings_to_strings_v1(std::vector<std::string>&, char[][MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int);
-
 
 
 __global__ void addKernel(int *c, const int *a, const int *b)
@@ -111,12 +100,12 @@ int main()
    
 
     // IMPLEMENTATION OF A FUNCTION TO ACCEPT ANY SIZE OF A CHAR ARRAY (attempt 2)
-    char c_strings6[char_array_size][MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+    char c_strings6[char_array_size][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
     StringUtils::init_Cstrings_array(c_strings6, char_array_size);
-    StringUtils::convert_strings_to_Cstrings(c_strings6, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+    StringUtils::convert_strings_to_Cstrings(c_strings6, strings1, char_array_size, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
     // StringUtils::convert_strings_to_Cstrings_ptr(c_strings6, strings1, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
     std::vector<std::string> result_strings6; // convert back into strings
-    StringUtils::convert_Cstrings_to_strings(result_strings6, c_strings6, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+    StringUtils::convert_Cstrings_to_strings(result_strings6, c_strings6, char_array_size, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
     // StringUtils::convert_Cstrings_to_strings_ptr(result_strings6, c_strings6, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
     StringUtils::print_vector(result_strings6, "c_strings6 result:");
     
@@ -159,6 +148,11 @@ int main()
         std::cout << "  - " << result_cstrings[i] << std::endl;
     }
     // --- *** ---
+
+    // CUDA SEQUENCE COMPARATOR
+    printf("Starting CUDA Sequence Comparator.\n");
+    CUDASequenceComparator cudaSequenceComparator("src_data_files/mirbase_miRNA_hsa-only.txt", "src_data_files/product_mRNAs_cpp.txt");
+
 
     // ANOTHER STARTER EXAMPLE
     // warning: this must be at the end after all cuda calls, since it somehow messes up if it is called before other cuda calls.

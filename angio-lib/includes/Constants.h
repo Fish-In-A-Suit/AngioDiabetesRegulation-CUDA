@@ -18,6 +18,6 @@ public:
         INFO
     };
 
-    static const int MAX_CHAR_ARRAY_SEQUENCE_LENGTH = 20000;
+    static const int MAX_CHAR_ARRAY_SEQUENCE_LENGTH = 15000;
 };
 

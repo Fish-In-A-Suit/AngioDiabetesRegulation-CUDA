@@ -54,13 +54,13 @@ void StringUtils::split(std::string& str, std::string delimiter, std::vector<std
 }
 
 bool StringUtils::contains(std::string& str, std::string& substr) {
-    std::cout << "str = " << str << ", substr = " << substr << ", str.find(substr) = " << str.find(substr) << std::endl;
+    // std::cout << "str = " << str << ", substr = " << substr << ", str.find(substr) = " << str.find(substr) << std::endl;
     if (str.find(substr) != std::string::npos) {
-        std::cout << "true" << std::endl;
+        // std::cout << "true" << std::endl;
         return true; // found
     }
     else {
-        std::cout << "false" << std::endl;
+        // std::cout << "false" << std::endl;
         return false; // not found
     }
 }

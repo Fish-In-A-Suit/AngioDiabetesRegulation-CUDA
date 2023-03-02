@@ -69,7 +69,7 @@ __global__ void charCopyKernelv2(const char** device_result_array, const char** 
 *Call with charCopyKernelv3 << <N, 1 >> > to execute the addKernel_parallel N times
 * in parallel.By using blockIdx.x to index the array, each block handles a different element of the
 * array.Schematic:
-*-BLOCK 0 : c[0] = a[0] + b[0]
+*- BLOCK 0 : c[0] = a[0] + b[0]
 * -BLOCK 1 : c[1] = a[1] + b[1]
 * -...
 * In the above calling example, each block executes a single thread.

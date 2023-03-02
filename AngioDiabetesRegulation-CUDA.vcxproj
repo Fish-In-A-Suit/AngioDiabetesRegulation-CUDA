@@ -31,7 +31,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.0.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -87,12 +87,14 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="angio-lib\src\CUDASequenceComparator.cu" />
     <CudaCompile Include="angio-lib\src\cuda_class_example.cu" />
     <CudaCompile Include="angio-lib\src\my_kernel.cu" />
     <CudaCompile Include="apps\main.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="angio-lib\includes\Constants.h" />
+    <ClInclude Include="angio-lib\includes\CUDASequenceComparator.cuh" />
     <ClInclude Include="angio-lib\includes\cuda_class_example.cuh" />
     <ClInclude Include="angio-lib\includes\FileUtils.h" />
     <ClInclude Include="angio-lib\includes\HighResolutionTimeManager.h" />
@@ -117,6 +119,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.0.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.targets" />
   </ImportGroup>
 </Project>
