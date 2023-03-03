@@ -27,6 +27,7 @@ class CUDASequenceComparator
 	std::vector<std::string> mRNA_ids; // contains uniprot mRNA ids
 	std::vector<std::vector<std::string>> mRNA_refseq_ids; //contains all of the NCBI Nucleotide refseq ids
 	char(*mRNA_sequences_chars)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+	char(*mRNA_sequences_chars_reversed)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
 	int* mRNA_lengths; // an array of lengths of each mRNA sequence in mRNA sequences
 
 	int max_miRNA_length;
@@ -45,4 +46,5 @@ private:
 	std::vector<std::vector<std::string>> process_miRNAsequences_file(std::string); // processes mirbase_miRNA_hsa-only.txt
 	std::vector<std::vector<std::string>> process_mRNAsequences_file(std::string);
 	void count_sequence_lengths(int**, std::vector<std::string>);
+	void reverse_mRNA_sequences();
 };

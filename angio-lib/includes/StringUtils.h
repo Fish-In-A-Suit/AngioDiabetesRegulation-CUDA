@@ -30,6 +30,8 @@ public:
 
     static void init_Cstrings_array(char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, char = '\0');
 
+    static void reverse_array(char(*&)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int*);
+
 private:
     StringUtils(); // constructor declared private, as StringUtils is meant to provide static string manipulation methods
 };

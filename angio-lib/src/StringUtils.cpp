@@ -305,6 +305,32 @@ void StringUtils::init_Cstrings_array(char dst_cstrings[][Constants::MAX_CHAR_AR
     }
 }
 
+/* 
+ * Reverses the elements of 'source_char_array_ptr' and stores the reversed values in 'destination_char_array_ptr'.
+ * 
+ * Params:
+ *   @param destination_char_array_ptr: a pointer to a 2D char array (that must be pre-initialised)
+ *   @param source_char_array_ptr: a pointer to a 2D char array
+ *   @param array_size: the size of source_char_array_ptr array
+ *   @param source_char_array_lengths: an int array of .lengths() of each string (row) in source_char_array_ptr. This can also be set to Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH.
+ * 
+ * Note: you need to pre-initialise the destination_char_array_ptr. Example:
+ * 
+ *      char(*mRNA_cstrings_reversed_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH] = new char[mRNA_sequences.size()][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+ *      StringUtils::reverse_array(mRNA_cstrings_reversed_array_ptr, mRNA_cstrings_array_ptr, mRNA_sequences.size(), mRNA_lengths);
+ *	    this->mRNA_sequences_chars_reversed = mRNA_cstrings_reversed_array_ptr;
+ * 
+ */
+void StringUtils::reverse_array(char(*&destination_char_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*source_char_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int array_size, int* source_char_array_lengths) {
+    for (int i = 0; i < array_size; i++) {
+        char* current_mRNA_sequence = source_char_array_ptr[i];
+        for (int j = 0; j < source_char_array_lengths[i]/2; j++) { // this for loop works down from both ends of the array
+            *(*(destination_char_array_ptr + i) + j) = current_mRNA_sequence[source_char_array_lengths[i] - 1 - j];
+            *(*(destination_char_array_ptr + i) + source_char_array_lengths[i]-1-j) = current_mRNA_sequence[j];
+        }
+    }
+}
+
 
 
 
