@@ -96,6 +96,22 @@ void StringUtils::print_vector(std::vector<std::string>& vecString, std::string 
     }
 }
 
+void StringUtils::print_array(int** array_ptr_reference, int arr_len, std::string firstMessage, bool shouldIndent, std::string indentSeparator) {
+    if (firstMessage != "") {
+        std::cout << firstMessage << std::endl;
+    }
+    if (shouldIndent) {
+        for (int i = 0; i < arr_len; i++) {
+            std::cout << indentSeparator << (*array_ptr_reference)[i] << std::endl;
+        }
+    }
+    else {
+        for (int i = 0; i < arr_len; i++) {
+            std::cout << (*array_ptr_reference)[i] << std::endl;
+        }
+    }
+}
+
 /*
  * Converts a vector of strings into the supplied pointer to a 2D char array. For example, {"Hello", "World", "T"} is converted to the following
  * single-character arrays (numbers like 01 correspond to indices [i][j]):

@@ -152,6 +152,7 @@ int main()
     // CUDA SEQUENCE COMPARATOR
     printf("Starting CUDA Sequence Comparator.\n");
     CUDASequenceComparator cudaSequenceComparator("src_data_files/mirbase_miRNA_hsa-only.txt", "src_data_files/product_mRNAs_cpp.txt");
+    cudaSequenceComparator.compare_sequences();
 
 
     // ANOTHER STARTER EXAMPLE

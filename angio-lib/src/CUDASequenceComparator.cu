@@ -1,7 +1,76 @@
 #include "CUDASequenceComparator.cuh"
 
-__global__ void compareSequences(int* d_result_array, char(*d_miRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH]) {
-	printf("Running parallel thread [%d,%d]\n", threadIdx.x, blockIdx.x);
+/*
+ * Compares two sequences (anneals a miRNA onto a mRNA from anneal_start_index forwards) and returns the match_strength (no_matches / size of miRNA). Can be reused across
+ * multiple kernels.
+ */
+__device__ float compare_sequences_kernel(char* miRNA_sequence, char* mRNA_sequence, int miRNA_len, int mRNA_len, int anneal_start_index) {
+	int successful_matches = 0;
+	int all_characters = miRNA_len;
+
+	// miRNA_len should be less than mRNA_len
+	if (miRNA_len > mRNA_len) {
+		printf("miRNA_len > mRNA_len, returning -1");
+		return -1;
+	}
+
+	for (int i = anneal_start_index; i < (anneal_start_index + miRNA_len); i++) {
+		// safety check that it doesn't overvlow bounds, logic to not overflow SHOULD BE IMPLEMENTED OUTSIDE OF THIS KERNEL
+		if (i > mRNA_len) {
+			break;
+		}
+		char current_miRNA_char = miRNA_sequence[i];
+		char current_mRNA_char = mRNA_sequence[i];
+		if (current_miRNA_char == current_mRNA_char) {
+			successful_matches++;
+		}
+	}
+
+	// TODO: SOLVE THIS !!!!!!!!!
+	
+
+	// printf("  - successful_matches = %d, all_characters = %d", static_cast<float>(successful_matches), static_cast<float>(all_characters)); // error when casting here !!!
+	printf("  - successful_matches = %d, all_characters = %d", (double)successful_matches, (double)all_characters); // error when casting here !!!
+	
+	// float result = __uint2float_rn(successful_matches) / __uint2float_rn(all_characters);
+
+	
+	// TODO: WHY AM I MISSING ALL FUNCTIONS SUCH AS __fdividexf, etc.
+
+	// TODO: LOOK AT THIS FOR IN-BUILT DIVISION IN CUDA: 1076101120
+	
+	// float result = (float)successful_matches / (float)all_characters
+	// return (float)successful_matches / all_characters;
+	float successful_matches_f = (float)successful_matches;
+	float all_characters_f = (float)all_characters;
+	
+	// return static_cast<float>(successful_matches) / static_cast<float>(all_characters);
+	// return successful_matches / all_characters;
+	return successful_matches_f / all_characters_f;
+}
+
+__device__ unsigned int __double2uint_rn(double x) {
+
+}
+
+/*
+ * This function compares each miRNA against all mRNAs and stores best matches into d_result_array. Compare logic overview:
+ * 
+ * for each miRNA:
+ *		for each mRNA:
+ *			float max_match_strength = 0.0f
+ *			for (int i = 0; i < (current_mRNA_length - current_miRNA_length); i++):
+ *				match_strength = compare_sequences(...); // compare_sequences(char* miRNA_seq, char* mRNA_seq, int miRNA_len, int mRNA_len, int anneal_start_index)
+ *				if match_strength > max_match_strength: max_match_strength = match_strength
+ * 
+ * There should be a number of blocks equal to the number of miRNAs. Each block should process one miRNA against all mRNAs. A block uses one thread to process one mRNA against a miRNA. Amount of threads per block = amount of mRNAs.
+ * Call like this: compare_sequences<<<miRNAs.size(), mRNAs.size()>>>
+ *			
+ * 
+ */
+__global__ void compare_sequence_arrays_kernel(float* d_result_array, char(*d_miRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int* d_miRNA_lengths, int* d_mRNA_lengths) {
+	// printf("Running parallel thread [%d,%d]\n", blockIdx.x, threadIdx.x);
+	// --- *** JUST A TEST *** ---
 	// char current_miRNA[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH] = *(*(d_miRNA_sequences + 0) + 0); // not allowed
 	char firstChar_miRNA = *(*(d_miRNA_sequences + 0) + 0);
 	char* firstRow_miRNA = d_miRNA_sequences[0];
@@ -15,8 +84,27 @@ __global__ void compareSequences(int* d_result_array, char(*d_miRNA_sequences)[C
 		d_result_array[0] = 1;
 	}
 	else {
-		d_result_array[0] = 0;
+		d_result_array[0] = -1;
 	}
+	// --- *** end of test *** ---
+
+	// --- *** MAIN LOGIC *** ---
+	char* current_miRNA = d_miRNA_sequences[blockIdx.x];
+	char* current_mRNA = d_mRNA_sequences[threadIdx.x];
+	int current_miRNA_length = d_miRNA_lengths[blockIdx.x];
+	int current_mRNA_length = d_mRNA_lengths[threadIdx.x];
+	int result_index = blockIdx.x * blockDim.x + threadIdx.x; // blockDim.x represents the number of threads in a block (= the number of mRNAs)
+
+	float max_match_strength = 0.0f;
+
+	for (int i = 0; i < (current_mRNA_length - current_miRNA_length); i++) {
+		float match_strength = compare_sequences_kernel(current_miRNA, current_mRNA, current_miRNA_length, current_mRNA_length, i);
+		if (match_strength > max_match_strength) {
+			max_match_strength = match_strength;
+		}
+	}
+	printf("Pparallel thread [%d,%d] result: %d\n", blockIdx.x, threadIdx.x, max_match_strength);
+	d_result_array[result_index] = max_match_strength;
 }
 
 CUDASequenceComparator::CUDASequenceComparator(std::string miRNAsequences_filepath, std::string mRNAsequences_filepath)
@@ -47,6 +135,17 @@ CUDASequenceComparator::CUDASequenceComparator(std::string miRNAsequences_filepa
 
 	this->miRNA_sequences_chars = miRNA_cstrings_array_ptr;
 	this->mRNA_sequences_chars = mRNA_cstrings_array_ptr;
+
+	// create and populate int arrays of sequence lengths
+	this->miRNA_lengths = new int[miRNA_sequences.size()];
+	this->mRNA_lengths = new int[mRNA_sequences.size()];
+	count_sequence_lengths(&miRNA_lengths, miRNA_sequences);
+	count_sequence_lengths(&mRNA_lengths, mRNA_sequences);
+	//StringUtils::print_array(&miRNA_lengths, miRNA_sequences.size(), "Printing computed miRNA lengths:");
+
+	// this will store the results after the kernel runs
+	this->sequence_comparison_results = new float[miRNA_sequences.size() * mRNA_sequences.size()];
+	
 
 	std::cout << "Maximum miRNA and mRNA lengths (in nucleotides) are: " << max_miRNA_length << " and " << max_mRNA_length << std::endl;
 	printf("\x1B[31mTesting\033[0m\n");
@@ -187,4 +286,61 @@ std::vector<std::vector<std::string>> CUDASequenceComparator::process_mRNAsequen
 	result.push_back(mRNA_uniprot_ids);
 	result.push_back(mRNA_sequences);
 	return result;
+}
+
+/*
+ * Loops over 'sequences' and populates the dst_array pointer with the lengts of the sequences. Note: when passing dst_array,
+ * you need to precede the pointer variable to the array with the reference operator (&).
+ */
+void CUDASequenceComparator::count_sequence_lengths(int** dst_array, std::vector<std::string> sequences) {
+	// todo: check that the sizes of dst_array and sequences match
+	for (int i = 0; i < sequences.size(); i++) {
+		(*dst_array)[i] = sequences[i].length();
+	}
+}
+
+/*
+ * Executes sequence comparison for this->miRNA_sequences_chars and this->mRNA_sequences_chars
+ */
+void CUDASequenceComparator::compare_sequences() {
+	int numBlocks = miRNA_sequences.size();
+	int numThreads = mRNA_sequences.size(); // num threads per each block
+
+	float* d_result_array;
+	char(*d_miRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+	char(*d_mRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
+	int* d_miRNA_lengths;
+	int* d_mRNA_lengths;
+
+	// set the primary GPU
+	cudaSetDevice(0);
+
+	// allocate GPU memory
+	cudaMalloc((void**)&d_result_array, numBlocks * numThreads * sizeof(float)); // there are miRNA_count * mRNA_count results of type int
+	cudaMalloc((void**)&d_miRNA_sequences, miRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char)); // 2D char array with miRNA_sequences.size() rows and MAX_CHAR_ARRAY_SEQUENCE_LENGTHS columns
+	cudaMalloc((void**)&d_mRNA_sequences, mRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char));
+	cudaMalloc((void**)&d_miRNA_lengths, miRNA_sequences.size() * sizeof(int)); // count of lengths corresponds to the count of miRNAs
+	cudaMalloc((void**)&d_mRNA_lengths, mRNA_sequences.size() * sizeof(int));
+
+	// copy data from host to device
+	cudaMemcpy(d_miRNA_sequences, this->miRNA_sequences_chars, miRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_mRNA_sequences, this->mRNA_sequences_chars, mRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_miRNA_lengths, this->miRNA_lengths, miRNA_sequences.size() * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_mRNA_lengths, this->mRNA_lengths, mRNA_sequences.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+	// run the gpu kernel
+	compare_sequence_arrays_kernel<<<numBlocks, numThreads>>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_miRNA_lengths, d_mRNA_lengths);
+
+	// copy back to host
+	cudaMemcpy(this->sequence_comparison_results, d_result_array, numBlocks * numThreads * sizeof(float), cudaMemcpyDeviceToHost);
+
+	// test success
+	std::cout << "result[0] = " << sequence_comparison_results[0] << std::endl;
+
+	// free device memory
+	cudaFree(d_result_array);
+	cudaFree(d_miRNA_sequences);
+	cudaFree(d_mRNA_sequences);
+	cudaFree(d_miRNA_lengths);
+	cudaFree(d_mRNA_lengths);
 }

@@ -18,6 +18,7 @@ public:
     static std::string to_string(double, int); // TODO declare statics here and not in cpp; use StringUtils::to_string to call.; BUT WHY?
     static void split(std::string&, std::string, std::vector<std::string>&);
     static void print_vector(std::vector<std::string>&, std::string = "", bool = true, std::string = "\t");
+    static void print_array(int**, int, std::string = "", bool = true, std::string = "\t");
     static bool contains(std::string&, std::string&);
     static bool contains(std::string&, const char*);
 
