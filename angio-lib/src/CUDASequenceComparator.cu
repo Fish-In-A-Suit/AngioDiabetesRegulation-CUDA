@@ -25,28 +25,9 @@ __device__ float compare_sequences_kernel(char* miRNA_sequence, char* mRNA_seque
 			successful_matches++;
 		}
 	}
+	// printf("  - successful_matches = %f, all_characters = %f", (float)successful_matches, (float)all_characters); // error when casting here !!!
 
-	// TODO: SOLVE THIS !!!!!!!!!
-	
-
-	// printf("  - successful_matches = %d, all_characters = %d", static_cast<float>(successful_matches), static_cast<float>(all_characters)); // error when casting here !!!
-	printf("  - successful_matches = %d, all_characters = %d", (double)successful_matches, (double)all_characters); // error when casting here !!!
-	
-	// float result = __uint2float_rn(successful_matches) / __uint2float_rn(all_characters);
-
-	
-	// TODO: WHY AM I MISSING ALL FUNCTIONS SUCH AS __fdividexf, etc.
-
-	// TODO: LOOK AT THIS FOR IN-BUILT DIVISION IN CUDA: 1076101120
-	
-	// float result = (float)successful_matches / (float)all_characters
-	// return (float)successful_matches / all_characters;
-	float successful_matches_f = (float)successful_matches;
-	float all_characters_f = (float)all_characters;
-	
-	// return static_cast<float>(successful_matches) / static_cast<float>(all_characters);
-	// return successful_matches / all_characters;
-	return successful_matches_f / all_characters_f;
+	return (float)successful_matches / all_characters;
 }
 
 __device__ unsigned int __double2uint_rn(double x) {
@@ -103,7 +84,7 @@ __global__ void compare_sequence_arrays_kernel(float* d_result_array, char(*d_mi
 			max_match_strength = match_strength;
 		}
 	}
-	printf("Pparallel thread [%d,%d] result: %d\n", blockIdx.x, threadIdx.x, max_match_strength);
+	printf("Pparallel thread [%d,%d] result: %f\n", blockIdx.x, threadIdx.x, max_match_strength);
 	d_result_array[result_index] = max_match_strength;
 }
 
