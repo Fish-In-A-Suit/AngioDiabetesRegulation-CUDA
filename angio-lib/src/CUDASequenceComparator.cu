@@ -31,6 +31,57 @@ __device__ float compare_sequences_kernel(char* miRNA_sequence, char* mRNA_seque
 }
 
 /*
+ * A device (GPU) implementation of the std::strlen function to find the number of characters inside a const char* cstr.
+ */
+__device__ int my_strlen_dev(char* cstr) {
+	int len = 0;
+	while (cstr[len] != '\0') {
+		len++;
+	}
+	return len;
+}
+
+/*
+ * Prints out first 'char_count' and last 'char_count' nucleotides of a sequence.
+ * 
+ * You use "%.*s" with specific printf parameters to print out the substring of a char* array.
+ * 
+ *     printf("%.*s", AMOUNT_OF_CHARS_TO_PRINT, START_INDEX);
+ * 
+ * Since char* sequence is a pointer to the first character in the array, you can use offsets to specify the starting character,
+ * eg. sequence + 7 would point to the 8th character in the char* array. 
+ * 
+ * Code example:
+ *     char* str = "Hello world!";
+ *     int start = 7;
+ *     int char_count = 5;
+ * 
+ *     printf("%.*s\n", char_count, str + start); 
+ *     // --> output: world
+ * 
+ * TODO: THIS FUNCTION IS SOMEHOW BUGGED. DEBUG IT.
+ */
+__device__ void debug_print_sequence_v1(char* sequence, int char_count) {
+	int start_char_index = 0;
+	int end_char_index = my_strlen_dev(sequence);
+
+	printf("%.*s", char_count, sequence + start_char_index); // print first char_count elements
+	printf(" ... ");
+	printf(".*s\n", char_count, sequence + end_char_index - char_count); // print last char_count elements
+}
+
+__device__ void debug_print_sequence_v2(char* sequence, int char_count, int seq_length) {
+	for (int i = 0; i < char_count; i++) {
+		printf("%s", sequence[i]);
+	}
+	printf(" ... ");
+	for (int i = seq_length - char_count; i < seq_length; i++) {
+		printf("%s", sequence[i]);
+	}
+	printf("\n");
+}
+
+/*
  * Reverses the input char array and returns a pointer to the reversed char array
  * THIS PRODUCES ERRORS!!! DO NOT USE THIS!!!
  */
@@ -83,6 +134,12 @@ __global__ void compare_sequence_arrays_kernel(float* d_result_array, char(*d_mi
 	int current_miRNA_length = d_miRNA_lengths[blockIdx.x];
 	int current_mRNA_length = d_mRNA_lengths[threadIdx.x];
 	int result_index = blockIdx.x * blockDim.x + threadIdx.x; // blockDim.x represents the number of threads in a block (= the number of mRNAs)
+
+	// use this with nsight debugger to step over first 5 and last 5 characters!!!
+	// printf("mRNA_sequence = ");
+	// debug_print_sequence_v2(current_mRNA, 5, current_mRNA_length);
+	// printf("mRNA_sequence_reversed = ");
+	// debug_print_sequence_v2(current_mRNA_reversed, 5, current_mRNA_length);
 
 	// char* current_miRNA_reversed = reverse_char_array(current_miRNA, current_miRNA_length);
 
@@ -342,6 +399,7 @@ void CUDASequenceComparator::compare_sequences() {
 
 	// run the gpu kernel
 	compare_sequence_arrays_kernel<<<numBlocks, numThreads>>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, d_miRNA_lengths, d_mRNA_lengths);
+	cudaDeviceSynchronize();
 
 	// copy back to host
 	cudaMemcpy(this->sequence_comparison_results, d_result_array, numBlocks * numThreads * sizeof(float), cudaMemcpyDeviceToHost);
@@ -356,4 +414,26 @@ void CUDASequenceComparator::compare_sequences() {
 	cudaFree(d_mRNA_sequences_reversed);
 	cudaFree(d_miRNA_lengths);
 	cudaFree(d_mRNA_lengths);
+}
+
+
+void CUDASequenceComparator::save_sequence_comparison_results(std::string filepath) {
+	std::cout << "Saving sequence comparison results into " << filepath << std::endl;
+
+	std::ofstream outfile(filepath, std::ios_base::app); // open the file in append mode
+	if (outfile.is_open()) {
+		for (int i = 0; i < miRNA_sequences.size(); i++) {
+			// write the current miRNA id without tab indentation
+			outfile << miRNA_miRDB_ids[i] << "," << miRNA_names[i] << std::endl;
+			for (int j = 0; j < mRNA_sequences.size(); j++) {
+				// write all corresponding mRNA matches (and their scores) WITH tab indentation
+				// example: unirotkb-xxxx : 0.16
+				outfile << "\t" << mRNA_ids[j] << ": " << sequence_comparison_results[i * j] << std::endl;
+			}
+		}
+		outfile.close();
+	}
+	else {
+		std::cout << "Error opening file " << filepath << std::endl;
+	}
 }

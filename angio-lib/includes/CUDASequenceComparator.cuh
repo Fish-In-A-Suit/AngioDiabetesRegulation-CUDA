@@ -41,10 +41,11 @@ public:
 	CUDASequenceComparator(std::string, std::string);
 	~CUDASequenceComparator();
 	void compare_sequences();
+	void save_sequence_comparison_results(std::string);
 
 private:
 	std::vector<std::vector<std::string>> process_miRNAsequences_file(std::string); // processes mirbase_miRNA_hsa-only.txt
 	std::vector<std::vector<std::string>> process_mRNAsequences_file(std::string);
 	void count_sequence_lengths(int**, std::vector<std::string>);
-	void reverse_mRNA_sequences();
+	// void reverse_mRNA_sequences();
 };
