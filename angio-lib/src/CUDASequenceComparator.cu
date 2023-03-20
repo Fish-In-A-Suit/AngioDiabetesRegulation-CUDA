@@ -247,6 +247,39 @@ __device__ __forceinline__ float compare_sequences_kernel_se(char* miRNA_sequenc
 	return (float)successful_matches / all_characters;
 }
 
+// for debugging purposes, this function only returns operation count
+__device__ __forceinline__ int compare_sequences_kernel_se_opcounts(char* miRNA_sequences_array, char* mRNA_sequences_array, int miRNA_start_index, int miRNA_len, int mRNA_start_index, int mRNA_len, int anneal_start_index) {
+	int successful_matches = 0;
+	int all_characters = miRNA_len;
+
+	// miRNA_len should be less than mRNA_len
+	if (miRNA_len > mRNA_len) {
+		printf("miRNA_len > mRNA_len, returning -1");
+		return -1;
+	}
+
+	int opcount = 0;
+	int mRNA_nucleotide_anneal_start = mRNA_start_index + anneal_start_index;
+	for (int i = mRNA_nucleotide_anneal_start; i < (mRNA_nucleotide_anneal_start + miRNA_len); i++) {
+		if (i > mRNA_start_index + mRNA_len) {
+			break;
+		}
+		char current_miRNA_char = miRNA_sequences_array[i - mRNA_nucleotide_anneal_start + miRNA_start_index]; // start at miRNA_start_index, then go by 1 all the way until miRNA_len
+		char current_mRNA_char = mRNA_sequences_array[i];
+
+		if (
+			((current_miRNA_char == 'A') && (current_mRNA_char == 'T')) ||
+			((current_miRNA_char == 'T') && (current_mRNA_char == 'A')) ||
+			((current_miRNA_char == 'C') && (current_mRNA_char == 'G')) ||
+			((current_miRNA_char == 'G') && (current_mRNA_char == 'C'))
+			) {
+			successful_matches++;
+		}
+		opcount++;
+	}
+	return opcount;
+}
+
 /*
   ptr = "pointer"
   Compares miRNA and mRNA sequences by inputting row pointers (single miRNA and mRNA sequence) and lengths
@@ -293,6 +326,48 @@ __global__ void compare_sequence_arrays_kernel_v2(float* d_result_array, char* d
 	}
 
 	printf("Parallel thread [%d,%d] result at index %d: %f\n", blockIdx.x, threadIdx.x, result_index, max_match_strength);
+	d_result_array[result_index] = max_match_strength;
+}
+
+__global__ void compare_sequence_arrays_kernel_v2_opcounts(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths) {
+	int miRNA_start_index = blockIdx.x * miRNA_seqarr_pitch;
+	char* current_miRNA_row_ptr = (char*)((char*)d_miRNA_sequences_array + miRNA_start_index); // since d_miRNA_sequences_array is a 1D array, this goes up to miRNA_start_index into the array
+	int mRNA_start_index = threadIdx.x * mRNA_seqarr_pitch;
+	char* current_mRNA_row_ptr = (char*)((char*)d_mRNA_sequences_array + mRNA_start_index);
+	char* current_mRNA_rev_row_ptr = (char*)((char*)d_mRNA_sequences_reversed_array + mRNA_start_index);
+
+	int miRNA_length = d_miRNA_lengths[blockIdx.x];
+	int mRNA_length = d_mRNA_lengths[threadIdx.x];
+
+	int result_index = blockIdx.x * blockDim.x + threadIdx.x;
+	float max_match_strength = 0.0f;
+
+	int opcount = 0;
+	int max = 0;
+	for (int i = 0; i < mRNA_length - miRNA_length; i++)
+	{
+		opcount += compare_sequences_kernel_se_opcounts(d_miRNA_sequences_array, d_mRNA_sequences_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
+		// float match_strength_reversed = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_reversed_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
+		/*
+		float match_strength;
+		// determine if there is a better match_strength for straight or reverse sequence - choose the one with greater strength
+		if (match_strength_straight > match_strength_reversed) {
+			match_strength = match_strength_straight;
+		}
+		else {
+			match_strength = match_strength_reversed;
+		}
+		// assign max_match_strength the value of match_strength, if match_strength is greater
+		if (match_strength > max_match_strength) {
+			max_match_strength = match_strength;
+		}
+		*/
+		if (i > max) {
+			max = i;
+		}
+	}
+
+	printf("Parallel thread [%d,%d]: miRNA_len = %d, mRNA_len = %d, (diff = %d): opcount_total = %d, opcount_sub = %d\n", blockIdx.x, threadIdx.x, miRNA_length, mRNA_length, mRNA_length-miRNA_length, opcount, (int) opcount/max);
 	d_result_array[result_index] = max_match_strength;
 }
 
@@ -645,7 +720,12 @@ void CUDASequenceComparator::compare_sequences_v2() {
 	// run the gpu kernel
 	// NOTE: if you used cudaMallocPitch, then you should supply appropriate pitches to the kernel!!!!
 	// compare_sequence_arrays_kernel_v2(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths)
-	compare_sequence_arrays_kernel_v2<<<numBlocks, numThreads>>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
+	
+	// this works:
+	// compare_sequence_arrays_kernel_v2<<<numBlocks, numThreads>>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
+	// debug only, delete bottom line
+	compare_sequence_arrays_kernel_v2_opcounts<<<numBlocks, numThreads >>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
+
 	cudaDeviceSynchronize();
 
 	// copy back
