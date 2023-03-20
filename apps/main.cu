@@ -151,8 +151,10 @@ int main()
 
     // CUDA SEQUENCE COMPARATOR
     printf("Starting CUDA Sequence Comparator.\n");
-    CUDASequenceComparator cudaSequenceComparator("src_data_files/mirbase_miRNA_hsa-only.txt", "src_data_files/product_mRNAs_cpp.txt");
-    cudaSequenceComparator.compare_sequences();
+    CUDASequenceComparator cudaSequenceComparator("src_data_files/mirbase_miRNA_hsa-only_v1.txt", "src_data_files/product_mRNAs_cpp.txt");
+    // cudaSequenceComparator.compare_sequences();
+    // cudaSequenceComparator.compare_sequences_debug();
+    cudaSequenceComparator.compare_sequences_v2();
     cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
 
 

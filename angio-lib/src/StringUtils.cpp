@@ -161,10 +161,46 @@ void StringUtils::print_array(int** array_ptr_reference, int arr_len, std::strin
  * 
  * @return: none, but populates input_char_array_ptr (pointing to the 2d char array) with strings.
  * 
+ * TODO: make use of row_count and col_count, else delete these two parameters
+ * 
  * Note: the input char pointer is passed by reference! Normally, the pointers are passed by values, therefore local copies are made. If you want to modify the contents
  * of the existing pointer, you have to pass it by reference using '&'.
  */
 void StringUtils::convert_strings_to_Cstrings_ptr(char(*&input_char_array_ptr)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>& strings, int row_count, int col_count) {
+    int strings_size = strings.size();
+    // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
+    for (int i = 0; i < strings_size; i++) {
+        std::string current_string = strings[i];
+        int string_length = current_string.length();
+        // todo: check if the size of string_length is less than the second dimension of input_char_array (represented by col_count)
+
+        for (int j = 0; j < string_length; j++) {
+            char c = current_string.at(j);
+            *(*(input_char_array_ptr + i) + j) = c; // access element at row i, column j
+        }
+
+    }
+}
+
+// for miRNAids debugging
+void StringUtils::convert_strings_to_Cstrings_ptr(char(*&input_char_array_ptr)[Constants::MIRNA_MI_ID_LENGTH], std::vector<std::string>& strings, int row_count, int col_count) {
+    int strings_size = strings.size();
+    // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
+    for (int i = 0; i < strings_size; i++) {
+        std::string current_string = strings[i];
+        int string_length = current_string.length();
+        // todo: check if the size of string_length is less than the second dimension of input_char_array (represented by col_count)
+
+        for (int j = 0; j < string_length; j++) {
+            char c = current_string.at(j);
+            *(*(input_char_array_ptr + i) + j) = c; // access element at row i, column j
+        }
+
+    }
+}
+
+// for mRNAids debugging
+void StringUtils::convert_strings_to_Cstrings_ptr(char(*&input_char_array_ptr)[Constants::MRNA_UNIPROT_ID_LENGTH], std::vector<std::string>& strings, int row_count, int col_count) {
     int strings_size = strings.size();
     // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
     for (int i = 0; i < strings_size; i++) {
