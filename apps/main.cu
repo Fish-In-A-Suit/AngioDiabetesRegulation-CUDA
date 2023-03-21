@@ -40,50 +40,6 @@ __global__ void addKernel_parallel(int* c, const int* a, const int* b) {
     c[blockIdx.x] = a[blockIdx.x] + b[blockIdx.x];
 }
 
-/*
-__global__ void compareStrings(const char* str1, const char* str2, int len, float* result) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < len) {
-        int match = 0;
-        for (int i = 0; i < len; i++) {
-            if (str1[tid + i] == str2[i]) { // TODO: why not str2[tid+i] ?
-                match++;
-            }
-        }
-        result[tid] = (float)match / (float)len;
-    }
-}
-
-__global__ void compareStringsv1(const char* str1, const char* str2, int len, float* result) {
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    int matches = 0;
-
-    if (tid < len) {
-        if (str1[tid] == str2[tid]) {
-            matches++;
-        }
-    }
-
-    __syncthreads(); // this is not recognized by intellisense, but it's valid in cuda
-
-    if (tid == 0) {
-        *result = (float)matches / (float)len;
-    }
-
-
-    IMPLEMENTATION IN MAIN()
-    const int len = 6;
-    char str1[len] = "hello";
-    char str2[len] = "world";
-    float result;
-
-    compareStringsv1 <<<1, len >> > (str1, str2, len, &result);
-    cudaDeviceSynchronize();
-
-    std::cout << "The match percentage is: " << result * 100 << "%" << std::endl;
-}
-*/
-
 int main()
 {
     const int char_array_size = 3;
@@ -98,7 +54,6 @@ int main()
     cudaExampleClass.test_function();
     // --- *** ---
    
-
     // IMPLEMENTATION OF A FUNCTION TO ACCEPT ANY SIZE OF A CHAR ARRAY (attempt 2)
     char c_strings6[char_array_size][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
     StringUtils::init_Cstrings_array(c_strings6, char_array_size);
@@ -109,17 +64,6 @@ int main()
     // StringUtils::convert_Cstrings_to_strings_ptr(result_strings6, c_strings6, char_array_size, MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
     StringUtils::print_vector(result_strings6, "c_strings6 result:");
     
-    /*
-    char result_strings2[char_array_size][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH];
-    cudaExampleClass.test_char_copy_function_v3(c_strings6, c_strings7, char_array_size);
-    std::cout << "Test_char_copy_function_v3 results:" << std::endl;
-    std::cout << "  - " << result_strings2[0] << std::endl;
-    std::cout << "  - " << result_strings2[1] << std::endl;
-    std::cout << "  - " << result_strings2[2] << std::endl;
-    */
-
-    // test my_strlen implementation
-    std::cout << "Strlen implentation my_strlen result for 'Hello' is: " << my_strlen("Hello") << std::endl;
 
     // EXAMPLE: COPYING CHAR ARRAYS FROM CPU TO GPU AND BACK
     // disadvantage of using double pointers: we cannot modify the values on the gpu, only read them
@@ -154,7 +98,7 @@ int main()
     CUDASequenceComparator cudaSequenceComparator("src_data_files/mirbase_miRNA_hsa-only_one.txt", "src_data_files/product_mRNAs_cpp_one.txt");
     // cudaSequenceComparator.compare_sequences();
     // cudaSequenceComparator.compare_sequences_debug();
-    cudaSequenceComparator.compare_sequences_v2(); // this is the best so far
+    cudaSequenceComparator.compare_sequences_v2(true); // this is the best so far
     cudaDeviceSynchronize();
     cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
 
@@ -169,48 +113,6 @@ int main()
 
     return 0;
 }
-
-/*
-void cudaCompareSequences(int* matchStrengths, std::vector<std::string>& mRNAs, std::vector<std::string>& miRNAs, unsigned int strArrSize) {
-    // TODO: pass two different sizes, one for mRNAs and one for miRNAs
-    // TODO: CONVERT ALL STD::STRING TO CHAR ARRAYS, SINCE CUDA DOESNT ACCEPT STD::STRING
-    
-    // convert std::string to const char, since CUDA doesn't accept std::string
-    char** mRNAs_charArr = convertArray(mRNAs, mRNAs.size());
-    char** miRNAs_charArr = convertArray(miRNAs, miRNAs.size());
-
-    // declare device (GPU) copies
-    char** dev_mRNAs;
-    char** dev_miRNAs;
-    int* dev_matchStrengths = 0;
-
-    // set primaty gpu
-    cudaSetDevice(0);
-
-    // allocate gpu memory
-    cudaMalloc((void**)&dev_mRNAs, strArrSize * sizeof(char));
-    cudaMalloc((void**)&dev_miRNAs, strArrSize * sizeof(char));
-    cudaMalloc((void**)&dev_matchStrengths, strArrSize * sizeof(int)); // todo: here, calculate size by: mRNAs_size * miRNAs_size * sizeof(int)
-
-    // copy data to device
-    cudaMemcpy(dev_mRNAs, mRNAs_charArr, strArrSize * sizeof(char), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_miRNAs, miRNAs_charArr, strArrSize * sizeof(char), cudaMemcpyHostToDevice);
-
-    // run the GPU kernel
-    stringCompareKernel_parallel<<<strArrSize, 1>>> (dev_matchStrengths, dev_mRNAs, dev_miRNAs);
-
-    // copy result back to host
-    cudaMemcpy(matchStrengths, dev_matchStrengths, strArrSize * sizeof(int), cudaMemcpyDeviceToHost);
-
-    // free device memory
-    cudaFree(dev_matchStrengths);
-    cudaFree(dev_miRNAs);
-    cudaFree(dev_mRNAs);
-
-    return;
-}
-*/
-
 
 // Function to add vectors a and b into c, without the error checks
 void addWithCudaSimple(int* c, const int* a, const int* b, unsigned int size) {

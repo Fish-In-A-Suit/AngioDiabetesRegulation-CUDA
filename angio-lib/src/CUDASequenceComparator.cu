@@ -97,7 +97,7 @@ __device__ __forceinline__ char* reverse_char_array(char* char_array_to_flip, in
 	// this is faulty, you cannot dynamically allocate like in C++
 	// char* result_array = new char[array_len];
 
-	// CUDA supporty dynamic shared memory allocation - see: https://stackoverflow.com/questions/5531247/allocating-shared-memory%5B/url%5D
+	// CUDA supports dynamic shared memory allocation - see: https://stackoverflow.com/questions/5531247/allocating-shared-memory%5B/url%5D
 	extern __shared__ char result_array[];
 	
 	for (int i = 0; i < array_len; i++) {
@@ -123,7 +123,6 @@ __device__ __forceinline__ char* reverse_char_array(char* char_array_to_flip, in
  * 
  */
 __global__ void compare_sequence_arrays_kernel(float* d_result_array, char(*d_miRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences_reversed)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int* d_miRNA_lengths, int* d_mRNA_lengths) {
-	// printf("Running parallel thread [%d,%d]\n", blockIdx.x, threadIdx.x);
 	// --- *** JUST A TEST *** ---
 	// char current_miRNA[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH] = *(*(d_miRNA_sequences + 0) + 0); // not allowed
 	char firstChar_miRNA = *(*(d_miRNA_sequences + 0) + 0);
@@ -145,6 +144,7 @@ __global__ void compare_sequence_arrays_kernel(float* d_result_array, char(*d_mi
 	// printf("mRNA_sequence_reversed = ");
 	// debug_print_sequence_v2(current_mRNA_reversed, 5, current_mRNA_length);
 
+	// old implementation of reversing, which was bugged. Now reverse sequences are allocated.
 	// char* current_miRNA_reversed = reverse_char_array(current_miRNA, current_miRNA_length);
 
 	float max_match_strength = 0.0f;
@@ -169,45 +169,6 @@ __global__ void compare_sequence_arrays_kernel(float* d_result_array, char(*d_mi
 		}
 	}
 	printf("Parallel thread [%d,%d] result at index %d: %f\n", blockIdx.x, threadIdx.x, result_index, max_match_strength);
-	d_result_array[result_index] = max_match_strength;
-}
-
-__global__ void compare_sequence_arrays_kernel_debug(float* d_result_array, char(*d_miRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences_reversed)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int* d_miRNA_lengths, int* d_mRNA_lengths, char *d_miRNA_ids, int miRNAids_pitch, char(*d_mRNA_ids)[Constants::MRNA_UNIPROT_ID_LENGTH]) {
-	char* current_miRNA = d_miRNA_sequences[blockIdx.x];
-	char* current_mRNA = d_mRNA_sequences[threadIdx.x];
-	char* current_mRNA_reversed = d_mRNA_sequences_reversed[threadIdx.x]; // BUGFIX_ d_mRNA_sequences_reversed* instead of d_mRNA_sequences
-	int current_miRNA_length = d_miRNA_lengths[blockIdx.x];
-	int current_mRNA_length = d_mRNA_lengths[threadIdx.x];
-	int result_index = blockIdx.x * blockDim.x + threadIdx.x; // blockDim.x represents the number of threads in a block (= the number of mRNAs)
-
-	char* current_miRNA_row_ptr = (char*)((char*)d_miRNA_ids + blockIdx.x * miRNAids_pitch); // 10 is the size of a miRNA MI id
-	printf("%.*s\n", miRNAids_pitch, current_miRNA_row_ptr);
-	
-	
-	char* current_mRNA_id = d_mRNA_ids[threadIdx.x];
-
-	float max_match_strength = 0.0f;
-
-	// anneal miRNA onto all mRNA substrings
-	for (int i = 0; i < (current_mRNA_length - current_miRNA_length); i++) {
-		// compare both the "straight" and the reversed miRNA sequences
-		float match_strength_straight = compare_sequences_kernel(current_miRNA, current_mRNA, current_miRNA_length, current_mRNA_length, i);
-		float match_strength_reversed = compare_sequences_kernel(current_miRNA, current_mRNA_reversed, current_miRNA_length, current_mRNA_length, i);
-		//printf("    - %f, %f", match_strength_straight, match_strength_reversed);
-		float match_strength;
-		// determine if there is a better match_strength for straight or reverse sequence - choose the one with greater strength
-		if (match_strength_straight > match_strength_reversed) {
-			match_strength = match_strength_straight;
-		}
-		else {
-			match_strength = match_strength_reversed;
-		}
-		// assign max_match_strength the value of match_strength, if match_strength is greater
-		if (match_strength > max_match_strength) {
-			max_match_strength = match_strength;
-		}
-	}
-	// printf("[blockIdx, blockDim, threadIdx] = [%d,%d,%d] result at i %d (%s, :: $s): %f\n", blockIdx.x, blockDim.x, threadIdx.x, result_index, current_miRNA_id, current_mRNA_id, max_match_strength);
 	d_result_array[result_index] = max_match_strength;
 }
 
@@ -252,6 +213,68 @@ __device__ __forceinline__ float compare_sequences_kernel_se(char* miRNA_sequenc
 	return (float)successful_matches / all_characters;
 }
 
+/*
+  ptr = "pointer"
+  Compares miRNA and mRNA sequences by inputting row pointers (single miRNA and mRNA sequence) and lengths
+
+  Should test this with compare_sequence_arrays_kernel_v2
+
+  d_miRNA_sequence = ptr to miRNA_sequence
+  d_mRNA_sequence = (TODO): implement so it receives only one row (in a 2D implementation)
+*/
+__device__ __forceinline__ float compare_sequences_kernel_ptr(char* d_miRNA_sequence, char* d_mRNA_sequence, int miRNA_len, int mRNA_len, int anneal_start_index) {
+	// TODO
+}
+
+/*
+ * This function is to be used with a linearised cudaMalloc and cudaMemcpy impelemntation. d_miRNA_sequences_array should be linear, miRNA_seqarr_pitch is the length of each miRNA with padding included.
+ */
+__global__ void compare_sequence_arrays_kernel_v2(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths) {
+	// blockIdx.x determines miRNA
+	// threadIdx.x determines mRNA
+	// blockDim.x = count mRNAs (amount of threads in a single block)
+	int miRNA_start_index = blockIdx.x * miRNA_seqarr_pitch;
+	char* current_miRNA_row_ptr = (char*)((char*)d_miRNA_sequences_array + miRNA_start_index); // since d_miRNA_sequences_array is a 1D array, this goes up to miRNA_start_index into the array
+	int mRNA_start_index = threadIdx.x * mRNA_seqarr_pitch;
+	char* current_mRNA_row_ptr = (char*)((char*)d_mRNA_sequences_array + mRNA_start_index);
+	char* current_mRNA_rev_row_ptr = (char*)((char*)d_mRNA_sequences_reversed_array + mRNA_start_index);
+
+	int miRNA_length = d_miRNA_lengths[blockIdx.x];
+	int mRNA_length = d_mRNA_lengths[threadIdx.x];
+
+	int result_index = blockIdx.x * blockDim.x + threadIdx.x;
+	float max_match_strength = 0.0f;
+
+	for (int i = 0; i < mRNA_length - miRNA_length; i++) 
+	{
+		// seqop 1 and 2
+		float match_strength_straight = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
+		float match_strength_reversed = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_reversed_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
+		
+		float match_strength;
+		// determine if there is a better match_strength for straight or reverse sequence - choose the one with greater strength
+		if (match_strength_straight > match_strength_reversed) {
+			match_strength = match_strength_straight;
+		}
+		else {
+			match_strength = match_strength_reversed;
+		}
+		// assign max_match_strength the value of match_strength, if match_strength is greater
+		if (match_strength > max_match_strength) {
+			max_match_strength = match_strength;
+		}
+	}
+
+	printf("Parallel thread [%d,%d] result at index %d: %f\n", blockIdx.x, threadIdx.x, result_index, max_match_strength);
+	d_result_array[result_index] = max_match_strength;
+}
+
+__global__ void compare_sequence_arrays_kernel_v3(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array,
+	int miRNA_seqarr_pitch, int mRNA_seqarr_pitch,
+	int* d_miRNA_lengths, int* d_mRNA_lengths) {
+
+}
+
 // for debugging purposes, this function only returns operation count
 __device__ __forceinline__ int compare_sequences_kernel_se_opcounts(char* miRNA_sequences_array, char* mRNA_sequences_array, int miRNA_start_index, int miRNA_len, int mRNA_start_index, int mRNA_len, int anneal_start_index) {
 	int successful_matches = 0;
@@ -286,55 +309,6 @@ __device__ __forceinline__ int compare_sequences_kernel_se_opcounts(char* miRNA_
 	return opcount;
 }
 
-/*
-  ptr = "pointer"
-  Compares miRNA and mRNA sequences by inputting row pointers (single miRNA and mRNA sequence) and lengths
-
-  Should test this with compare_sequence_arrays_kernel_v2
-*/
-__device__ __forceinline__ float compare_sequences_kernel_ptr(char* d_miRNA_sequence, char* d_mRNA_sequence, int miRNA_len, int mRNA_len, int anneal_start_index) {
-	// TODO
-}
-
-__global__ void compare_sequence_arrays_kernel_v2(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths) {
-	// blockIdx.x determines miRNA
-	// threadIdx.x determines mRNA
-	// blockDim.x = count mRNAs (amount of threads in a single block)
-	int miRNA_start_index = blockIdx.x * miRNA_seqarr_pitch;
-	char* current_miRNA_row_ptr = (char*)((char*)d_miRNA_sequences_array + miRNA_start_index); // since d_miRNA_sequences_array is a 1D array, this goes up to miRNA_start_index into the array
-	int mRNA_start_index = threadIdx.x * mRNA_seqarr_pitch;
-	char* current_mRNA_row_ptr = (char*)((char*)d_mRNA_sequences_array + mRNA_start_index);
-	char* current_mRNA_rev_row_ptr = (char*)((char*)d_mRNA_sequences_reversed_array + mRNA_start_index);
-
-	int miRNA_length = d_miRNA_lengths[blockIdx.x];
-	int mRNA_length = d_mRNA_lengths[threadIdx.x];
-
-	int result_index = blockIdx.x * blockDim.x + threadIdx.x;
-	float max_match_strength = 0.0f;
-
-	for (int i = 0; i < mRNA_length - miRNA_length; i++) 
-	{
-		float match_strength_straight = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
-		float match_strength_reversed = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_reversed_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
-		
-		float match_strength;
-		// determine if there is a better match_strength for straight or reverse sequence - choose the one with greater strength
-		if (match_strength_straight > match_strength_reversed) {
-			match_strength = match_strength_straight;
-		}
-		else {
-			match_strength = match_strength_reversed;
-		}
-		// assign max_match_strength the value of match_strength, if match_strength is greater
-		if (match_strength > max_match_strength) {
-			max_match_strength = match_strength;
-		}
-	}
-
-	printf("Parallel thread [%d,%d] result at index %d: %f\n", blockIdx.x, threadIdx.x, result_index, max_match_strength);
-	d_result_array[result_index] = max_match_strength;
-}
-
 // this counts opcounts for debugging the correctness of miRNA processing
 __global__ void compare_sequence_arrays_kernel_v2_opcounts(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths) {
 	int miRNA_start_index = blockIdx.x * miRNA_seqarr_pitch;
@@ -354,26 +328,10 @@ __global__ void compare_sequence_arrays_kernel_v2_opcounts(float* d_result_array
 	for (int i = 0; i < mRNA_length - miRNA_length; i++)
 	{
 		opcount += compare_sequences_kernel_se_opcounts(d_miRNA_sequences_array, d_mRNA_sequences_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
-		// float match_strength_reversed = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_reversed_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
-		/*
-		float match_strength;
-		// determine if there is a better match_strength for straight or reverse sequence - choose the one with greater strength
-		if (match_strength_straight > match_strength_reversed) {
-			match_strength = match_strength_straight;
-		}
-		else {
-			match_strength = match_strength_reversed;
-		}
-		// assign max_match_strength the value of match_strength, if match_strength is greater
-		if (match_strength > max_match_strength) {
-			max_match_strength = match_strength;
-		}
-		*/
 		if (i > max) {
 			max = i;
 		}
 	}
-
 	printf("Parallel thread [%d,%d]: miRNA_len = %d, mRNA_len = %d, (diff = %d): opcount_total = %d, opcount_sub = %d\n", blockIdx.x, threadIdx.x, miRNA_length, mRNA_length, mRNA_length-miRNA_length, opcount, (int) opcount/max);
 	d_result_array[result_index] = max_match_strength;
 }
@@ -395,9 +353,49 @@ __global__ void miRNA_id_copy_kernel(char* miRNAids, int pitch) {
 		printf("%c", row_ptr[i]);
 	}
 	printf("\n");
+}
 
+__global__ void compare_sequence_arrays_kernel_debug_2D(float* d_result_array, char(*d_miRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*d_mRNA_sequences_reversed)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int* d_miRNA_lengths, int* d_mRNA_lengths, char* d_miRNA_ids, int miRNAids_pitch, char* d_mRNA_ids, int mRNAids_pitch) {
+	// TODO: in this debug function, only d_miRNA_ids and d_mRNA_ids have been converted for a 2D memcpy implementation.
+	// d_miRNA_sequences, etc have not yet been implemented for a 2D implementation.
+	//
+	// 
+	//
+	char* current_miRNA = d_miRNA_sequences[blockIdx.x];
+	char* current_mRNA = d_mRNA_sequences[threadIdx.x];
+	char* current_mRNA_reversed = d_mRNA_sequences_reversed[threadIdx.x]; // BUGFIX_ d_mRNA_sequences_reversed* instead of d_mRNA_sequences
+	int current_miRNA_length = d_miRNA_lengths[blockIdx.x];
+	int current_mRNA_length = d_mRNA_lengths[threadIdx.x];
+	int result_index = blockIdx.x * blockDim.x + threadIdx.x; // blockDim.x represents the number of threads in a block (= the number of mRNAs)
 
-	//t
+	// this is an attempt to access mRNAids and miRNAids based on prior 2D allocation using cudaMallocPitch and cudaMemcpy2D
+	char* current_miRNA_row_ptr = (char*)((char*)d_miRNA_ids + blockIdx.x * miRNAids_pitch); // 10 is the size of a miRNA MI id
+	printf("%.*s\n", miRNAids_pitch, current_miRNA_row_ptr);
+
+	char* current_mRNA_row_ptr = (char*)((char*)d_mRNA_ids + blockIdx.x * mRNAids_pitch);
+
+	float max_match_strength = 0.0f;
+	// anneal miRNA onto all mRNA substrings
+	for (int i = 0; i < (current_mRNA_length - current_miRNA_length); i++) {
+		// compare both the "straight" and the reversed miRNA sequences
+		float match_strength_straight = compare_sequences_kernel(current_miRNA, current_mRNA, current_miRNA_length, current_mRNA_length, i);
+		float match_strength_reversed = compare_sequences_kernel(current_miRNA, current_mRNA_reversed, current_miRNA_length, current_mRNA_length, i);
+		//printf("    - %f, %f", match_strength_straight, match_strength_reversed);
+		float match_strength;
+		// determine if there is a better match_strength for straight or reverse sequence - choose the one with greater strength
+		if (match_strength_straight > match_strength_reversed) {
+			match_strength = match_strength_straight;
+		}
+		else {
+			match_strength = match_strength_reversed;
+		}
+		// assign max_match_strength the value of match_strength, if match_strength is greater
+		if (match_strength > max_match_strength) {
+			max_match_strength = match_strength;
+		}
+	}
+	printf("[blockIdx, blockDim, threadIdx] = [%d,%d,%d] result at i %d (%s, :: $s): %f\n", blockIdx.x, blockDim.x, threadIdx.x, result_index, current_miRNA_id, current_mRNA_id, max_match_strength);
+	d_result_array[result_index] = max_match_strength;
 }
 
 CUDASequenceComparator::CUDASequenceComparator(std::string miRNAsequences_filepath, std::string mRNAsequences_filepath)
