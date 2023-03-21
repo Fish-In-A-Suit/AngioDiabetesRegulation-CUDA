@@ -243,6 +243,11 @@ __device__ __forceinline__ float compare_sequences_kernel_se(char* miRNA_sequenc
 			) {
 			successful_matches++;
 		}
+
+		if ((current_miRNA_char != 'A') && (current_miRNA_char != 'T') && (current_miRNA_char != 'C') && (current_miRNA_char != 'G') ||
+			(current_mRNA_char != 'A') && (current_mRNA_char != 'T') && (current_mRNA_char != 'C') && (current_mRNA_char != 'G')) {
+			printf("ERROR!!!");
+		}
 	}
 	return (float)successful_matches / all_characters;
 }
@@ -264,6 +269,7 @@ __device__ __forceinline__ int compare_sequences_kernel_se_opcounts(char* miRNA_
 		if (i > mRNA_start_index + mRNA_len) {
 			break;
 		}
+
 		char current_miRNA_char = miRNA_sequences_array[i - mRNA_nucleotide_anneal_start + miRNA_start_index]; // start at miRNA_start_index, then go by 1 all the way until miRNA_len
 		char current_mRNA_char = mRNA_sequences_array[i];
 
@@ -329,6 +335,7 @@ __global__ void compare_sequence_arrays_kernel_v2(float* d_result_array, char* d
 	d_result_array[result_index] = max_match_strength;
 }
 
+// this counts opcounts for debugging the correctness of miRNA processing
 __global__ void compare_sequence_arrays_kernel_v2_opcounts(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths) {
 	int miRNA_start_index = blockIdx.x * miRNA_seqarr_pitch;
 	char* current_miRNA_row_ptr = (char*)((char*)d_miRNA_sequences_array + miRNA_start_index); // since d_miRNA_sequences_array is a 1D array, this goes up to miRNA_start_index into the array
@@ -496,6 +503,9 @@ std::vector<std::vector<std::string>> CUDASequenceComparator::process_miRNAseque
 		std::string line;
 		while (std::getline(file, line)) {
 			//std::vector<std::string> line_elements = StringUtils::split(line, "\t");
+			if (line == "") {
+				continue;
+			}
 			std::vector<std::string> line_elements;
 			StringUtils::split(line, "\t", line_elements);
 			miRNA_miRDB_ids.push_back(line_elements[0]);
@@ -543,6 +553,9 @@ std::vector<std::vector<std::string>> CUDASequenceComparator::process_mRNAsequen
 		std::string line;
 		int line_index = 0;
 		while (std::getline(file, line)) {
+			if (line == "") {
+				continue;
+			}
 			if (StringUtils::contains(line, "#")) {
 				line_index++;
 				continue;
@@ -652,7 +665,10 @@ void CUDASequenceComparator::compare_sequences() {
 	cudaFree(d_mRNA_lengths);
 }
 
-void CUDASequenceComparator::compare_sequences_v2() {
+/*
+ * If _d_check_opcounts is ticked, the kernel will check the amount of operations performed on a miRNA-mRNA comparison, instead of the match strength.
+ */
+void CUDASequenceComparator::compare_sequences_v2(bool _d_check_opcounts) {
 	int numBlocks = miRNA_sequences.size();
 	int numThreads = mRNA_sequences.size(); // num threads per each block
 
@@ -722,10 +738,15 @@ void CUDASequenceComparator::compare_sequences_v2() {
 	// compare_sequence_arrays_kernel_v2(float* d_result_array, char* d_miRNA_sequences_array, char* d_mRNA_sequences_array, char* d_mRNA_sequences_reversed_array, int miRNA_seqarr_pitch, int mRNA_seqarr_pitch, int* d_miRNA_lengths, int* d_mRNA_lengths)
 	
 	// this works:
-	// compare_sequence_arrays_kernel_v2<<<numBlocks, numThreads>>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
-	// debug only, delete bottom line
-	compare_sequence_arrays_kernel_v2_opcounts<<<numBlocks, numThreads >>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
-
+	if (_d_check_opcounts == false) {
+		// check match strengths
+		compare_sequence_arrays_kernel_v2<<<numBlocks, numThreads >>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
+	}
+	else {
+		// check opcounts
+		compare_sequence_arrays_kernel_v2_opcounts<<<numBlocks, numThreads >>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
+	}
+	
 	cudaDeviceSynchronize();
 
 	// copy back

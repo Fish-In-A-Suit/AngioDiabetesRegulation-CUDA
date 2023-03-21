@@ -57,7 +57,7 @@ public:
 	CUDASequenceComparator(std::string, std::string);
 	~CUDASequenceComparator();
 	void compare_sequences();
-	void compare_sequences_v2();
+	void compare_sequences_v2(bool=false);
 	void compare_sequences_debug();
 	void save_sequence_comparison_results(std::string);
 
