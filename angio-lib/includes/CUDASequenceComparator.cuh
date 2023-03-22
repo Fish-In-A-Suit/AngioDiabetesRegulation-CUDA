@@ -51,19 +51,27 @@ class CUDASequenceComparator
 
 	float* sequence_comparison_results;
 
+	// debug pointers for cuda logging
+	int* debug_seqop_array;
+	char* debug_mRNA_substrings_array;
+	char* debug_match_strings_array;
+	int* debug_num_matches_per_seqop_array;
+
 	bool cuda_function_safety_condition = false; // set this to true when it is checked that no miRNA or mRNA is longer than the value set in Constants
 
 public:
 	CUDASequenceComparator(std::string, std::string);
 	~CUDASequenceComparator();
 	void compare_sequences();
-	void compare_sequences_v2(bool=false);
+	void compare_sequences_v2(bool=false, bool=false);
 	void compare_sequences_debug();
+	void debug_log_init(std::string, std::string);
 	void save_sequence_comparison_results(std::string);
 
 private:
 	std::vector<std::vector<std::string>> process_miRNAsequences_file(std::string); // processes mirbase_miRNA_hsa-only.txt
 	std::vector<std::vector<std::string>> process_mRNAsequences_file(std::string);
 	void count_sequence_lengths(int**, std::vector<std::string>);
+	int get_element_index(std::vector<std::string>, std::string);
 	// void reverse_mRNA_sequences();
 };
