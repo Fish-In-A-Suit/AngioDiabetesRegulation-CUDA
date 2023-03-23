@@ -67,7 +67,7 @@ public:
 	void compare_sequences_debug();
 	void debug_log_init(std::string, std::string);
 	void save_sequence_comparison_results(std::string);
-
+	void print_debug_log_info();
 private:
 	std::vector<std::vector<std::string>> process_miRNAsequences_file(std::string); // processes mirbase_miRNA_hsa-only.txt
 	std::vector<std::vector<std::string>> process_mRNAsequences_file(std::string);

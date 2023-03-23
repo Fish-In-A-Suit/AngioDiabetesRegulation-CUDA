@@ -205,10 +205,12 @@ __device__ __forceinline__ float compare_sequences_kernel_se(char* miRNA_sequenc
 			successful_matches++;
 		}
 
+		/*
 		if ((current_miRNA_char != 'A') && (current_miRNA_char != 'T') && (current_miRNA_char != 'C') && (current_miRNA_char != 'G') ||
 			(current_mRNA_char != 'A') && (current_mRNA_char != 'T') && (current_mRNA_char != 'C') && (current_mRNA_char != 'G')) {
 			printf("ERROR!!!");
 		}
+		*/
 	}
 	return (float)successful_matches / all_characters;
 }
@@ -247,10 +249,12 @@ __device__ __forceinline__ float compare_sequences_kernel_se_log(char* miRNA_seq
 			match_strings_array[anneal_start_index * miRNA_len + i] = ' ';
 		}
 
+		/*
 		if ((current_miRNA_char != 'A') && (current_miRNA_char != 'T') && (current_miRNA_char != 'C') && (current_miRNA_char != 'G') ||
 			(current_mRNA_char != 'A') && (current_mRNA_char != 'T') && (current_mRNA_char != 'C') && (current_mRNA_char != 'G')) {
 			printf("ERROR!!!");
 		}
+		*/
 
 		mRNA_substrings_array[anneal_start_index * miRNA_len + i] = current_mRNA_char;
 	}
@@ -331,15 +335,26 @@ __global__ void compare_sequence_arrays_kernel_v2_log(float* d_result_array, cha
 	float max_match_strength = 0.0f;
 
 	for (int i = 0; i < mRNA_length - miRNA_length; i++) {
+		seqop_array[i] = i; // each loop iteration is one sequence comparison
 		float match_strength_straight = compare_sequences_kernel_se_log(d_miRNA_sequences_array, d_mRNA_sequences_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i,
 			mRNA_substrings_array, match_strings_array);
 
-		num_matches_per_seqop_array[i] = (int)match_strength_straight * miRNA_length; // TODO 22-03-2023: START FROM HERE, MAYBE PASS mRNA_substrings_array and match_strings_array by REFERENCE or put them into SHARED MEMORY
-		seqop_array[i] = i; // each loop iteration is one sequence comparison
+		int num_matches = (int) (match_strength_straight * miRNA_length);
+		num_matches_per_seqop_array[i] = num_matches; // TODO 22-03-2023: START FROM HERE, MAYBE PASS mRNA_substrings_array and match_strings_array by REFERENCE or put them into SHARED MEMORY
 
-		// log type compares only forward at the moment
+		printf("[DEVICE] seqop %d: num_matches %d\n", i, num_matches);
+
+		// __syncthreads(); // this is just an intellisense warning, see on how to remove this https://stackoverflow.com/questions/6180555/how-to-get-vs-2010-to-recognize-certain-cuda-functions
+
+		// reverse match strength without debug logging
 		// float match_strength_reversed = compare_sequences_kernel_se(d_miRNA_sequences_array, d_mRNA_sequences_reversed_array, miRNA_start_index, miRNA_length, mRNA_start_index, mRNA_length, i);
+	
+		// todo: compute max match strength
+		max_match_strength = match_strength_straight;
+		d_result_array[i] = max_match_strength;
 	}
+	// the bottom line is incorrect in this case, since we are only running 1 block and 1 kernel.
+	// d_result_array[result_index] = max_match_strength;
 }
 
 // for debugging purposes, this function only returns operation count
@@ -517,7 +532,6 @@ CUDASequenceComparator::CUDASequenceComparator(std::string miRNAsequences_filepa
 
 	// this will store the results after the kernel runs
 	this->sequence_comparison_results = new float[miRNA_sequences.size() * mRNA_sequences.size()];
-	
 
 	std::cout << "Maximum miRNA and mRNA lengths (in nucleotides) are: " << max_miRNA_length << " and " << max_mRNA_length << std::endl;
 	printf("\x1B[31mTesting\033[0m\n");
@@ -801,6 +815,17 @@ void CUDASequenceComparator::compare_sequences_v2(bool _d_check_opcounts, bool _
 	cudaMalloc((void**)&d_miRNA_lengths, miRNA_sequences.size() * sizeof(int)); // count of lengths corresponds to the count of miRNAs
 	cudaMalloc((void**)&d_mRNA_lengths, mRNA_sequences.size() * sizeof(int));
 
+	/*
+	int miRNA_len = miRNA_lengths[0];
+	int mRNA_len = mRNA_lengths[0];
+	int total_seqops = mRNA_len - miRNA_len;
+	cudaMalloc((void**)&d_debug_seqop_array, total_seqops * sizeof(int));
+	cudaMalloc((void**)&d_debug_mRNA_substrings_array, total_seqops * miRNA_len * sizeof(char));
+	cudaMalloc((void**)&d_debug_match_strings_array, total_seqops * miRNA_len * sizeof(char));
+	cudaMalloc((void**)&d_debug_num_matches_per_seqop_array, total_seqops * sizeof(int));
+	*/
+	
+
 	// copy data to device
 	cudaMemcpy(d_miRNA_sequences, h_miRNA_sequences, miRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_mRNA_sequences, h_mRNA_sequences, mRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char), cudaMemcpyHostToDevice);
@@ -823,16 +848,24 @@ void CUDASequenceComparator::compare_sequences_v2(bool _d_check_opcounts, bool _
 	}
 	else { // debug log
 		// TODO: check the debug_log_init() was called !!!
+		
 		int miRNA_len = miRNA_lengths[0];
 		int mRNA_len = mRNA_lengths[0];
 		int total_seqops = mRNA_len - miRNA_len;
 
+		// init host debug arrays
+		this->debug_seqop_array = new int[total_seqops];
+		this->debug_mRNA_substrings_array = new char[total_seqops * miRNA_len];
+		this->debug_match_strings_array = new char[total_seqops * miRNA_len];
+		this->debug_num_matches_per_seqop_array = new int[total_seqops];
+		
 		cudaMalloc((void**)&d_debug_seqop_array, total_seqops * sizeof(int));
 		cudaMalloc((void**)&d_debug_mRNA_substrings_array, total_seqops * miRNA_len * sizeof(char));
 		cudaMalloc((void**)&d_debug_match_strings_array, total_seqops * miRNA_len * sizeof(char));
 		cudaMalloc((void**)&d_debug_num_matches_per_seqop_array, total_seqops * sizeof(int));
-
-		compare_sequence_arrays_kernel_v2_log<<<1, 1 >>> (d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, 
+		
+		
+		compare_sequence_arrays_kernel_v2_log<<<1, 1>>> (d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, 
 			Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths,
 			d_debug_seqop_array, d_debug_mRNA_substrings_array, d_debug_match_strings_array, d_debug_num_matches_per_seqop_array);
 		cudaDeviceSynchronize();
@@ -855,7 +888,6 @@ void CUDASequenceComparator::compare_sequences_v2(bool _d_check_opcounts, bool _
 	cudaFree(d_mRNA_sequences_reversed);
 	cudaFree(d_miRNA_lengths);
 	cudaFree(d_mRNA_lengths);
-
 }
 
 /**
@@ -1002,6 +1034,9 @@ void CUDASequenceComparator::compare_sequences_debug() {
 /*
  * Call this function prior to debugging for a single miRNA-mRNA match with logging functionality.
  * Sets up internal std::vectors and char arrays to only contain single values related to the miRNA_id or mRNA_id.
+ * 
+ * You can also call this function by only supplying one of the parameters (eg. miRNA_id = "hsa-let-7f-1", mRNA_id = "") eg. debug_log_init("hsa-let-7f-1", ""),
+ * this shrinks only either miRNAs or mRNAs and leaves the unsupplied parameter fields unchanged.
  */
 void CUDASequenceComparator::debug_log_init(std::string miRNA_id, std::string mRNA_id) {
 	// SHRINK all std::vector<std::string> and int* miRNA/mRNA_lengths to only miRNA_id and mRNA_id
@@ -1020,10 +1055,15 @@ void CUDASequenceComparator::debug_log_init(std::string miRNA_id, std::string mR
 	new_mRNA_sequences.push_back(this->mRNA_sequences[mRNA_index]);
 	new_mRNA_ids.push_back(mRNA_id);
 
-	this->miRNA_sequences = new_miRNA_sequences;
-	this->miRNA_miRDB_ids = new_miRNA_ids;
-	this->mRNA_sequences = new_mRNA_sequences;
-	this->mRNA_ids = new_mRNA_ids;
+	if (miRNA_id != "") {
+		this->miRNA_sequences = new_miRNA_sequences;
+		this->miRNA_miRDB_ids = new_miRNA_ids;
+	}
+	if (mRNA_id != "") {
+		this->mRNA_sequences = new_mRNA_sequences;
+		this->mRNA_ids = new_mRNA_ids;
+	}
+	
 
 	// RECOMPUTE CSTRINGS
 	// char miRNA_cstrings_array[miRNA_sequences.size()][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH]; // not allowed, as miRNA_sequences.size() is not const
@@ -1052,6 +1092,41 @@ void CUDASequenceComparator::debug_log_init(std::string miRNA_id, std::string mR
 
 	std::cout << "debug_log_init completed. miRNA_ids size = " << this->miRNA_miRDB_ids.size() << ", mRNA_ids size = " << this->mRNA_ids.size() << ", miRNA_id = " << miRNA_miRDB_ids[0] << ", mRNA_id = " << mRNA_ids[0] << std::endl;
 
+}
+
+/*
+ * Prints the mRNA subsequences compared against a miRNA 
+ */
+void CUDASequenceComparator::print_debug_log_info() {
+	int miRNA_len = miRNA_lengths[0];
+	int mRNA_len = mRNA_lengths[0];
+	int total_seqops = mRNA_len - miRNA_len;
+
+	//for (int i = 0; i < total_seqops; i++) {
+	//	printf("%d\n", debug_num_matches_per_seqop_array[i]);
+	//}
+
+	for (int i = 0; i < total_seqops * miRNA_len; i += miRNA_len) {
+		int seqop = (int)(i / miRNA_len);
+		printf("seqop %d: %d/%d = %f\n", seqop, debug_num_matches_per_seqop_array[seqop], miRNA_len, sequence_comparison_results[seqop]);
+		printf("miRNA: ");
+		for (int j = 0; j < miRNA_len; j++) {
+			int index = i + j;
+			printf("%c", this->debug_mRNA_substrings_array[index]);
+		}
+		printf("\n");
+		printf("mRNA:  ");
+		for (int j = 0; j < miRNA_len; j++) {
+			printf("%c", this->miRNA_sequences[0][j]);
+		}
+		printf("\n");
+		printf("match: ");
+		for (int j = 0; j < miRNA_len; j++) {
+			int index = i + j;
+			printf("%c", this->debug_match_strings_array[index]);
+		}
+		printf("\n\n");
+	}
 }
 
 void CUDASequenceComparator::save_sequence_comparison_results(std::string filepath) {

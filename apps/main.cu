@@ -98,16 +98,18 @@ int main()
     CUDASequenceComparator cudaSequenceComparator("src_data_files/mirbase_miRNA_hsa-only.txt", "src_data_files/product_mRNAs_cpp.txt");
     // cudaSequenceComparator.compare_sequences();
     // cudaSequenceComparator.compare_sequences_debug();
-    // cudaSequenceComparator.compare_sequences_v2(false) // enable this line for opcounts
-    
-    // enable these 2 lines for debug logging
+
+    // cudaSequenceComparator.compare_sequences_v2(false); // enable this line for opcounts
+    // cudaDeviceSynchronize();
+
+    // enable these 3 lines for debug logging
     cudaSequenceComparator.debug_log_init("MI0000060", "UniProtKB:Q0VGL1");
     cudaSequenceComparator.compare_sequences_v2(false, true); // this is the best so far // todo: uncomment this
-
     cudaDeviceSynchronize();
+    cudaSequenceComparator.print_debug_log_info();
 
     // todo: uncomment this
-    // cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
+    cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
 
 
     // ANOTHER STARTER EXAMPLE
