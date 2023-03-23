@@ -22,6 +22,8 @@ public:
     static bool contains(std::string&, std::string&);
     static bool contains(std::string&, const char*);
 
+    static void convert_strings_to_Cstrings_ptr(char*&, std::vector<std::string>& strings, int row_count, int col_count);
+
     static void convert_strings_to_Cstrings(char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], std::vector<std::string>&, int, int);
     static void convert_Cstrings_to_strings(std::vector<std::string>&, char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int);
 
@@ -35,6 +37,7 @@ public:
     static void init_Cstrings_array(char[][Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, char = '\0');
 
     static void reverse_array(char(*&)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], char(*)[Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH], int, int*);
+    static void reverse_array(char*&, char*, int, int*, int);
 
 private:
     StringUtils(); // constructor declared private, as StringUtils is meant to provide static string manipulation methods

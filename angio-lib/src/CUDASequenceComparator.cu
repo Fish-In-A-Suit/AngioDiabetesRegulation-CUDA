@@ -814,18 +814,7 @@ void CUDASequenceComparator::compare_sequences_v2(bool _d_check_opcounts, bool _
 	cudaMalloc((void**)&d_mRNA_sequences_reversed, mRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char));
 	cudaMalloc((void**)&d_miRNA_lengths, miRNA_sequences.size() * sizeof(int)); // count of lengths corresponds to the count of miRNAs
 	cudaMalloc((void**)&d_mRNA_lengths, mRNA_sequences.size() * sizeof(int));
-
-	/*
-	int miRNA_len = miRNA_lengths[0];
-	int mRNA_len = mRNA_lengths[0];
-	int total_seqops = mRNA_len - miRNA_len;
-	cudaMalloc((void**)&d_debug_seqop_array, total_seqops * sizeof(int));
-	cudaMalloc((void**)&d_debug_mRNA_substrings_array, total_seqops * miRNA_len * sizeof(char));
-	cudaMalloc((void**)&d_debug_match_strings_array, total_seqops * miRNA_len * sizeof(char));
-	cudaMalloc((void**)&d_debug_num_matches_per_seqop_array, total_seqops * sizeof(int));
-	*/
 	
-
 	// copy data to device
 	cudaMemcpy(d_miRNA_sequences, h_miRNA_sequences, miRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_mRNA_sequences, h_mRNA_sequences, mRNA_sequences.size() * Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH * sizeof(char), cudaMemcpyHostToDevice);
@@ -847,8 +836,11 @@ void CUDASequenceComparator::compare_sequences_v2(bool _d_check_opcounts, bool _
 		compare_sequence_arrays_kernel_v2_opcounts<<<numBlocks, numThreads >>>(d_result_array, d_miRNA_sequences, d_mRNA_sequences, d_mRNA_sequences_reversed, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH, d_miRNA_lengths, d_mRNA_lengths);
 	}
 	else { // debug log
-		// TODO: check the debug_log_init() was called !!!
-		
+		/* TODO
+		When using compare_sequences_v2(false, true), this part of the code causes weird allocation problems.
+		Values copied back into debug_seqop_array, debug_mRNA_substrings_array, debug_match_strings_array and debug_num_matches_per_seqop array are
+		wrong (but not all). Maybe the problem is calling a __device__ subkernel as a function from global kernel too many times?
+		*/
 		int miRNA_len = miRNA_lengths[0];
 		int mRNA_len = mRNA_lengths[0];
 		int total_seqops = mRNA_len - miRNA_len;

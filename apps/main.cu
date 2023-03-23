@@ -6,6 +6,7 @@
 #include "my_cuda_header.cuh"
 #include "cuda_class_example.cuh"
 #include "CUDASequenceComparator.cuh"
+#include "CUDASequenceComparatorV1.cuh"
 
 #include <stdio.h>
 #include <iostream>
@@ -103,13 +104,15 @@ int main()
     // cudaDeviceSynchronize();
 
     // enable these 3 lines for debug logging
-    cudaSequenceComparator.debug_log_init("MI0000060", "UniProtKB:Q0VGL1");
-    cudaSequenceComparator.compare_sequences_v2(false, true); // this is the best so far // todo: uncomment this
-    cudaDeviceSynchronize();
-    cudaSequenceComparator.print_debug_log_info();
+    // cudaSequenceComparator.debug_log_init("MI0000060", "UniProtKB:Q0VGL1");
+    // cudaSequenceComparator.compare_sequences_v2(false, true); 
+    // cudaDeviceSynchronize();
+    // cudaSequenceComparator.print_debug_log_info();
 
     // todo: uncomment this
-    cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
+    // cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
+
+    CUDASequenceComparatorV1 csqv1("src_data_files/mirbase_miRNA_hsa-only_one.txt", "src_data_files/product_mRNAs_cpp_one.txt");
 
 
     // ANOTHER STARTER EXAMPLE

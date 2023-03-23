@@ -158,6 +158,7 @@ void StringUtils::print_array(int** array_ptr_reference, int arr_len, std::strin
  * @param strings: a std::vector array of std::strings
  * @param row_count: corresponds to strings.size() and represents the first-dimension of the 2D array (amount of rows)
  * @param col_count: corresponds to the maximum string length than can be stored (strings must not surpass the length set by Constants::MAX_CHAR_ARAY_SEQUENCE_LENGTH)
+ *                   col_count should be thought of as the pitch used to store the values in memory !!!
  * 
  * @return: none, but populates input_char_array_ptr (pointing to the 2d char array) with strings.
  * 
@@ -213,6 +214,24 @@ void StringUtils::convert_strings_to_Cstrings_ptr(char(*&input_char_array_ptr)[C
             *(*(input_char_array_ptr + i) + j) = c; // access element at row i, column j
         }
 
+    }
+}
+
+// this function works for variable char array lengths, assuming they were allocated using malloc before calling this function!
+void StringUtils::convert_strings_to_Cstrings_ptr(char*& input_char_array_ptr, std::vector<std::string>& strings, int row_count, int col_count) {
+    // TODO: implement allocation size check, to see if the allocated size of the pointer is greater than 0!
+    
+    int strings_size = strings.size();
+    // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
+    for (int i = 0; i < strings_size; i++) {
+        std::string current_string = strings[i];
+        int string_length = current_string.length();
+
+        for (int j = 0; j < string_length; j++) {
+            char c = current_string.at(j);
+            // *(*(input_char_array_ptr + i) + j) = c; // access element at row i, column j
+            input_char_array_ptr[i * col_count + j] = c;
+        }
     }
 }
 
@@ -363,6 +382,22 @@ void StringUtils::reverse_array(char(*&destination_char_array_ptr)[Constants::MA
         for (int j = 0; j < source_char_array_lengths[i]/2; j++) { // this for loop works down from both ends of the array
             *(*(destination_char_array_ptr + i) + j) = current_mRNA_sequence[source_char_array_lengths[i] - 1 - j];
             *(*(destination_char_array_ptr + i) + source_char_array_lengths[i]-1-j) = current_mRNA_sequence[j];
+        }
+    }
+}
+
+// accepts variable length arrays, with mRNA_pitch meaning how far these values are spaced out in memory
+void StringUtils::reverse_array(char*& destination_char_array_ptr, char* source_char_array_ptr, int array_size, int* source_char_array_lengths, int mRNA_pitch) {
+    for (int i = 0; i < array_size; i++) {
+        int current_mRNA_length = source_char_array_lengths[i];
+        for (int j = 0; j < mRNA_pitch; j++) {
+            int index = i * mRNA_pitch + j;
+            if (j > current_mRNA_length) {
+                destination_char_array_ptr[index] = '\0';
+            }
+            else {
+                destination_char_array_ptr[index] = source_char_array_ptr[mRNA_pitch - 1 - index];
+            }
         }
     }
 }

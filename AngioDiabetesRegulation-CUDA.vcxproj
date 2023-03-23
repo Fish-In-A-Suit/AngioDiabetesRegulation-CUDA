@@ -91,6 +91,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="angio-lib\src\CUDASequenceComparator.cu" />
+    <CudaCompile Include="angio-lib\src\CUDASequenceComparatorV1.cu" />
     <CudaCompile Include="angio-lib\src\cuda_class_example.cu" />
     <CudaCompile Include="angio-lib\src\my_kernel.cu" />
     <CudaCompile Include="apps\main.cu" />
@@ -98,6 +99,7 @@
   <ItemGroup>
     <ClInclude Include="angio-lib\includes\Constants.h" />
     <ClInclude Include="angio-lib\includes\CUDASequenceComparator.cuh" />
+    <ClInclude Include="angio-lib\includes\CUDASequenceComparatorV1.cuh" />
     <ClInclude Include="angio-lib\includes\cuda_class_example.cuh" />
     <ClInclude Include="angio-lib\includes\FileUtils.h" />
     <ClInclude Include="angio-lib\includes\HighResolutionTimeManager.h" />
