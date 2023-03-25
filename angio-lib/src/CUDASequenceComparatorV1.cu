@@ -26,14 +26,14 @@ CUDASequenceComparatorV1::CUDASequenceComparatorV1(std::string miRNA_filepath, s
 	this->miRNA_sequences_chars = (char*)malloc(this->miRNA_sequences.size() * this->max_miRNA_length * sizeof(char));
 	this->mRNA_sequences_chars = (char*)malloc(this->mRNA_sequences.size() * this->max_mRNA_length * sizeof(char));
 	this->mRNA_sequences_chars_reversed = (char*)malloc(this->mRNA_sequences.size() * this->max_mRNA_length * sizeof(char));
-	memset(miRNA_sequences_chars, 0, sizeof(char) * 80); // initialize memory space to 0
-	memset(mRNA_sequences_chars, 0, sizeof(char) * 80); // initialize memory space to zero
-	memset(mRNA_sequences_chars_reversed, 0, sizeof(char) * 80); // initialize memory space to zero
+	memset(miRNA_sequences_chars, 0, sizeof(char) * this->miRNA_sequences.size() * this->max_miRNA_length);
+	memset(mRNA_sequences_chars, 0, sizeof(char) * this->mRNA_sequences.size() * this->max_mRNA_length);
+	memset(mRNA_sequences_chars_reversed, 0, sizeof(char) * this->mRNA_sequences.size() * this->max_mRNA_length);
 
 	// populate this->miRNA_sequences_chars and this->mRNA_sequences_chars
 	std::cout << "Processing miRNA_sequences_chars and mRNA_sequences_chars." << std::endl;
-	StringUtils::convert_strings_to_Cstrings_ptr(miRNA_sequences_chars, miRNA_sequences, miRNA_sequences.size(), Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
-	StringUtils::convert_strings_to_Cstrings_ptr(mRNA_sequences_chars, mRNA_sequences, mRNA_sequences.size(), Constants::MAX_CHAR_ARRAY_SEQUENCE_LENGTH);
+	StringUtils::convert_strings_to_Cstrings_ptr(miRNA_sequences_chars, miRNA_sequences, miRNA_sequences.size(), this->max_miRNA_length);
+	StringUtils::convert_strings_to_Cstrings_ptr(mRNA_sequences_chars, mRNA_sequences, mRNA_sequences.size(), this->max_mRNA_length);
 	StringUtils::reverse_array(mRNA_sequences_chars_reversed, mRNA_sequences_chars, mRNA_sequences.size(), mRNA_lengths, max_mRNA_length);
 
 	this->sequence_comparison_results = (float*)malloc(miRNA_sequences.size() * mRNA_sequences.size() * sizeof(float));

@@ -232,6 +232,12 @@ void StringUtils::convert_strings_to_Cstrings_ptr(char*& input_char_array_ptr, s
             // *(*(input_char_array_ptr + i) + j) = c; // access element at row i, column j
             input_char_array_ptr[i * col_count + j] = c;
         }
+
+        // append '\0' from the end of string to the end of col_count
+        for (int j = string_length; j < col_count; j++) { // start at 'string_length' ! (string_length - 1 would be the last char of the string!)
+            // input_char_array_ptr[i * col_count + j] = '\0'; // VS-Bug: adding \0 to the array, doesn't display the entire array in Visual Studio Debugger Text-Visualiser, but only the array up to \0.
+            input_char_array_ptr[i * col_count + j] = ' '; // adding ' ' is better, since the entire array in the debugger is visible
+        }
     }
 }
 
