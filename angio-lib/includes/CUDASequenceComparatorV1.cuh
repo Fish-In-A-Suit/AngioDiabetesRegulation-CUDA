@@ -38,7 +38,7 @@ class CUDASequenceComparatorV1
 public:
 	CUDASequenceComparatorV1(std::string, std::string);
 	~CUDASequenceComparatorV1();
-	//void compare_sequences();
+	void compare_sequences();
 private:
 	std::vector<std::vector<std::string>> process_miRNAsequences_file(std::string); // processes mirbase_miRNA_hsa-only.txt
 	std::vector<std::vector<std::string>> process_mRNAsequences_file(std::string);

@@ -185,3 +185,50 @@ void CUDASequenceComparatorV1::count_sequence_lengths(int*& dst_array, std::vect
 		dst_array[i] = sequences[i].length();
 	}
 }
+
+void CUDASequenceComparatorV1::compare_sequences() {
+	int num_blocks = miRNA_sequences.size();
+	int num_threads = mRNA_sequences.size(); // num threads per each block
+
+	float* d_result_array;
+	char* d_miRNA_sequences_array;
+	char* d_mRNA_sequences_array;
+	char* d_mRNA_sequences_reversed_array;
+	int* d_miRNA_lengths;
+	int* d_mRNA_lengths;
+
+	int miRNA_pitch = max_miRNA_length;
+	int mRNA_pitch = max_mRNA_length;
+
+	// set the primary GPU
+	cudaSetDevice(0);
+
+	// allocate GPU memory
+	cudaMalloc((void**)&d_result_array, num_blocks * num_threads * sizeof(float));
+	cudaMalloc((void**)&d_miRNA_sequences_array, miRNA_sequences.size() * miRNA_pitch * sizeof(char));
+	cudaMalloc((void**)&d_mRNA_sequences_array, mRNA_sequences.size() * mRNA_pitch * sizeof(char));
+	cudaMalloc((void**)&d_mRNA_sequences_reversed_array, mRNA_sequences.size() * mRNA_pitch * sizeof(char));
+	cudaMalloc((void**)&d_miRNA_lengths, miRNA_sequences.size() * sizeof(int));
+	cudaMalloc((void**)&d_mRNA_lengths, mRNA_sequences.size() * sizeof(int));
+
+	// copy data from host to device
+	cudaMemcpy(d_miRNA_sequences_array, this->miRNA_sequences_chars, miRNA_sequences.size() * miRNA_pitch * sizeof(char), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_mRNA_sequences_array, this->mRNA_sequences_chars, mRNA_sequences.size() * mRNA_pitch * sizeof(char), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_mRNA_sequences_reversed_array, this->mRNA_sequences_chars_reversed, mRNA_sequences.size() * mRNA_pitch * sizeof(char), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_miRNA_lengths, this->miRNA_lengths, miRNA_sequences.size() * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_mRNA_lengths, this->mRNA_lengths, mRNA_sequences.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+	// test copy back for debugging purposes
+	char* h_miRNA_sequences_array_res = (char*)malloc(this->miRNA_sequences.size() * this->max_miRNA_length * sizeof(char));
+	char* h_mRNA_sequences_array_res = (char*)malloc(this->mRNA_sequences.size() * this->max_mRNA_length * sizeof(char));
+	char* h_mRNA_sequences_reversed_array_res = (char*)malloc(this->mRNA_sequences.size() * this->max_mRNA_length * sizeof(char));
+	cudaMemcpy(h_miRNA_sequences_array_res, d_miRNA_sequences_array, miRNA_sequences.size() * miRNA_pitch * sizeof(char), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_mRNA_sequences_array_res, d_mRNA_sequences_array, mRNA_sequences.size() * mRNA_pitch * sizeof(char), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_mRNA_sequences_reversed_array_res, d_mRNA_sequences_reversed_array, mRNA_sequences.size() * mRNA_pitch * sizeof(char), cudaMemcpyDeviceToHost);
+	std::vector<std::string> h_miRNA_seq_vec;
+	std::vector<std::string> h_mRNA_seq_vec;
+	std::vector<std::string> h_mRNA_seq_rev_vec;
+	StringUtils::convert_Cstrings_to_strings_ptr(h_miRNA_seq_vec, h_miRNA_sequences_array_res, miRNA_sequences.size(), miRNA_pitch, ' ');
+	StringUtils::convert_Cstrings_to_strings_ptr(h_mRNA_seq_vec, h_mRNA_sequences_array_res, mRNA_sequences.size(), mRNA_pitch, ' ');
+	StringUtils::convert_Cstrings_to_strings_ptr(h_mRNA_seq_rev_vec, h_mRNA_sequences_reversed_array_res, mRNA_sequences.size(), mRNA_pitch, ' ');
+}

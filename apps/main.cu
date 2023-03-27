@@ -113,6 +113,7 @@ int main()
     // cudaSequenceComparator.save_sequence_comparison_results("src_data_files/sequence_comparison_results.txt");
 
     CUDASequenceComparatorV1 csqv1("src_data_files/mirbase_miRNA_hsa-only_one.txt", "src_data_files/product_mRNAs_cpp_one.txt");
+    csqv1.compare_sequences();
 
 
     // ANOTHER STARTER EXAMPLE

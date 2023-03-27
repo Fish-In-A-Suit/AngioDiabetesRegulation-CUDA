@@ -223,20 +223,39 @@ void StringUtils::convert_strings_to_Cstrings_ptr(char*& input_char_array_ptr, s
     
     int strings_size = strings.size();
     // todo: check if size of input_char_array (the first dimensiuon) = row_count and strings_size match
-    for (int i = 0; i < strings_size; i++) {
+    for (int i = 0; i < strings_size; i++) { // loop over each miRNA
         std::string current_string = strings[i];
         int string_length = current_string.length();
 
-        for (int j = 0; j < string_length; j++) {
+        for (int j = 0; j < string_length; j++) { // loop over each char in miRNA
             char c = current_string.at(j);
             // *(*(input_char_array_ptr + i) + j) = c; // access element at row i, column j
             input_char_array_ptr[i * col_count + j] = c;
         }
 
-        // append '\0' from the end of string to the end of col_count
-        for (int j = string_length; j < col_count; j++) { // start at 'string_length' ! (string_length - 1 would be the last char of the string!)
+        // append ' ' from the end of string to the end of col_count
+        for (int j = string_length; j < col_count; j++) { // append ' ' (as many spaces as col_count - string_length)
             // input_char_array_ptr[i * col_count + j] = '\0'; // VS-Bug: adding \0 to the array, doesn't display the entire array in Visual Studio Debugger Text-Visualiser, but only the array up to \0.
             input_char_array_ptr[i * col_count + j] = ' '; // adding ' ' is better, since the entire array in the debugger is visible
+        }
+    }
+}
+
+// this function works with linear variable char array lengths, assuming they were allocated using malloc before calling this function!
+// each string is 1 row, row_count represents the amount of strings in 'src', 'col_count' is the pitch used
+// delimiter is the character used to delimit strings (ie. to populate space between the length of the string and the col_count ie. pitch
+void StringUtils::convert_Cstrings_to_strings_ptr(std::vector<std::string>& dst, char*& src, int row_count, int col_count, char delimiter) {
+    int string_start_index = -1;
+    for (int i = 0; i < row_count; i++) {
+        string_start_index = i * col_count; // each string in the array is separated by a pitch of col_count
+        for (int j = 0; j < col_count; j++) {
+            int string_end_index = i * col_count + j; // calculate the end index
+            char current_char = src[string_end_index];
+            if ((current_char == delimiter) || (string_end_index == col_count*(i+1)-1)) { // if delimiter is hit, or if max pitch is reached; col_count*(i+1) is the condition for the end of this string, -1 substracted due to c++ array notation starting at 0
+                std::string row_str(src + string_start_index, src + string_end_index + 1); // BUGFIX: + 1 is necessary here, otherwise a bug occurs where the output string is 1 character too short
+                dst.push_back(row_str);
+                break;
+            }
         }
     }
 }
