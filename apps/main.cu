@@ -114,6 +114,7 @@ int main()
 
     CUDASequenceComparatorV1 csqv1("src_data_files/mirbase_miRNA_hsa-only_one.txt", "src_data_files/product_mRNAs_cpp_one.txt");
     csqv1.compare_sequences();
+    cudaDeviceSynchronize();
 
 
     // ANOTHER STARTER EXAMPLE
